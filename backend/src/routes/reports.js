@@ -1,7 +1,7 @@
 const express = require('express')
 const { body, validationResult } = require('express-validator')
 const Report = require('../models/Report')
-const auth = require('../middleware/auth')
+const { protect } = require('../middleware/auth')
 const router = express.Router()
 
 // @route   POST /api/reports
@@ -135,7 +135,7 @@ router.get('/:obNumber', async (req, res) => {
 // @route   PUT /api/reports/:obNumber/status
 // @desc    Update report status (admin only)
 // @access  Private (Admin)
-router.put('/:obNumber/status', auth, async (req, res) => {
+router.put('/:obNumber/status', protect, async (req, res) => {
   try {
     const { obNumber } = req.params
     const { status, notes, assignedOfficer } = req.body

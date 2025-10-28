@@ -3,7 +3,7 @@ const { body, validationResult } = require('express-validator')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const User = require('../models/User')
-const auth = require('../middleware/auth')
+const { protect } = require('../middleware/auth')
 const router = express.Router()
 
 // @route   POST /api/auth/register
@@ -137,7 +137,7 @@ router.post('/login', [
 // @route   GET /api/auth/me
 // @desc    Get current user
 // @access  Private
-router.get('/me', auth, async (req, res) => {
+router.get('/me', protect, async (req, res) => {
   try {
     res.json({
       user: {

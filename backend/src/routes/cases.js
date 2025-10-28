@@ -1,12 +1,12 @@
 const express = require('express')
 const Report = require('../models/Report')
-const auth = require('../middleware/auth')
+const { protect } = require('../middleware/auth')
 const router = express.Router()
 
 // @route   GET /api/cases
-// @desc    Get all cases (admin/officer only)
+// @desc    Get all cases (admin/officer only) 
 // @access  Private
-router.get('/', auth, async (req, res) => {
+router.get('/', protect, async (req, res) => {
   try {
     // Check if user has permission
     if (!['admin', 'officer'].includes(req.user.role)) {
@@ -46,7 +46,7 @@ router.get('/', auth, async (req, res) => {
 // @route   GET /api/cases/urgent
 // @desc    Get urgent cases
 // @access  Private (Admin/Officer)
-router.get('/urgent', auth, async (req, res) => {
+router.get('/urgent', protect, async (req, res) => {
   try {
     if (!['admin', 'officer'].includes(req.user.role)) {
       return res.status(403).json({ message: 'Access denied' })
@@ -68,7 +68,7 @@ router.get('/urgent', auth, async (req, res) => {
 // @route   GET /api/cases/stats
 // @desc    Get case statistics
 // @access  Private (Admin only)
-router.get('/stats', auth, async (req, res) => {
+router.get('/stats', protect, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Access denied' })

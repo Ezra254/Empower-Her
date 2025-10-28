@@ -80,13 +80,56 @@ export default function ReportModal({ isOpen, onClose }: ReportModalProps) {
 
   const onSubmit = async (data: ReportFormData) => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // Generate mock OB number
-      const obNumber = `OB-${Date.now().toString().slice(-8)}`
-      
-      toast.success(`Report submitted successfully! Your OB number is: ${obNumber}`)
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
+
+      const response = await fetch(`${baseUrl}/reports`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          phone: data.phone,
+          incidentType: data.incidentType,
+          incidentDate: data.incidentDate, // ISO8601 (yyyy-mm-dd)
+          incidentTime: data.incidentTime, // HH:mm
+          location: data.location,
+          description: data.description,
+          witnesses: data.witnesses || '',
+          evidence: data.evidence || '',
+          urgency: data.urgency,
+          consentToContact: data.consentToContact,
+          consentToShare: data.consentToShare
+        })
+      })
+
+      const payload = await response.json()
+
+      if (!response.ok) {
+        // Try to show validation messages if available
+        if (payload?.errors?.length) {
+          const firstErr = payload.errors[0]
+          toast.error(firstErr.msg || 'Validation failed. Please check your inputs.')
+        } else if (payload?.message) {
+          toast.error(payload.message)
+        } else {
+          toast.error('Failed to submit report. Please try again.')
+        }
+        return
+      }
+
+      // Expected 201 with obNumber and status
+      const obNumber: string | undefined = payload?.obNumber
+      const status: string | undefined = payload?.status
+
+      if (obNumber) {
+        toast.success(`Report submitted! OB: ${obNumber}${status ? ` • Status: ${status}` : ''}`)
+      } else {
+        toast.success('Report submitted successfully!')
+      }
+
       reset()
       setCurrentStep(1)
       onClose()
