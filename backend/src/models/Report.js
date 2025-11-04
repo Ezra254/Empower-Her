@@ -4,7 +4,11 @@ const reportSchema = new mongoose.Schema({
   obNumber: {
     type: String,
     required: true,
-    unique: true,
+    unique: true
+  },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
     index: true
   },
   personalInfo: {
@@ -89,7 +93,11 @@ const reportSchema = new mongoose.Schema({
       'investigating',
       'case_assigned',
       'in_progress',
+      'ongoing',
+      'summoning',
+      'invite_to_court',
       'resolved',
+      'completed',
       'closed',
       'referred'
     ],
@@ -109,8 +117,18 @@ const reportSchema = new mongoose.Schema({
     name: String,
     badgeNumber: String,
     department: String,
-    contactInfo: String
+    contactInfo: String,
+    phone: String,
+    email: String
   },
+  handlingParties: [{
+    name: String,
+    role: String, // e.g., 'investigating_officer', 'prosecutor', 'judge', 'lawyer'
+    department: String,
+    phone: String,
+    email: String,
+    badgeNumber: String
+  }],
   caseNotes: [{
     note: {
       type: String,
@@ -153,8 +171,7 @@ const reportSchema = new mongoose.Schema({
   timestamps: true
 })
 
-// Indexes for better query performance
-reportSchema.index({ obNumber: 1 })
+// Indexes for better query performance (obNumber index is automatically created by unique: true)
 reportSchema.index({ 'personalInfo.email': 1 })
 reportSchema.index({ status: 1 })
 reportSchema.index({ urgency: 1 })

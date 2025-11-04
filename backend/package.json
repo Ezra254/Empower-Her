@@ -8,7 +8,8 @@
     "dev": "nodemon src/server.js",
     "test": "jest",
     "lint": "eslint src/",
-    "build": "echo 'No build step required'"
+    "build": "echo 'No build step required'",
+    "kill-port": "node -e \"const { execSync } = require('child_process'); try { const output = execSync('netstat -ano | findstr :5000', { encoding: 'utf8' }); const pid = output.split(/\\s+/)[4]; if (pid) { execSync(`taskkill /PID ${pid} /F`, { stdio: 'inherit' }); console.log('✓ Port 5000 freed'); } else { console.log('Port 5000 is already free'); } } catch(e) { console.log('Port 5000 is already free'); }\""
   },
   "dependencies": {
     "express": "^4.18.2",

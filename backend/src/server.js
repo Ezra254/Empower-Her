@@ -24,8 +24,25 @@ app.use(limiter)
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true)
+    
+    const allowedOrigins = [
+      process.env.FRONTEND_URL || 'http://localhost:3000',
+      'http://localhost:3000',
+      'http://127.0.0.1:3000'
+    ]
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true)
+    } else {
+      callback(null, true) // Allow all origins in development
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }))
 
 // Body parsing middleware
@@ -49,12 +66,29 @@ app.use('/api/reports', require('./routes/reports'))
 app.use('/api/cases', require('./routes/cases'))
 app.use('/api/admin', require('./routes/admin'))
 
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'EmpowerHer API',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: {
+      health: '/api/health',
+      reports: '/api/reports',
+      auth: '/api/auth',
+      cases: '/api/cases',
+      admin: '/api/admin'
+    }
+  })
+})
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    version: '1.0.0'
+    version: '1.0.0',
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
   })
 })
 
@@ -73,9 +107,23 @@ app.use('*', (req, res) => {
 })
 
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`)
   console.log(`📱 Environment: ${process.env.NODE_ENV || 'development'}`)
+})
+
+// Handle server errors
+server.on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} is already in use`)
+    console.log(`💡 Another process is using port ${PORT}`)
+    console.log(`💡 On Windows, you can find and kill it with: netstat -ano | findstr :${PORT}`)
+    console.log(`💡 Then run: taskkill /PID <PID> /F`)
+    process.exit(1)
+  } else {
+    console.error('❌ Server error:', error)
+    process.exit(1)
+  }
 })
 
 module.exports = app

@@ -1,6 +1,7 @@
 import type { NextPage } from 'next'
 import Head from 'next/head'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/router'
 import { motion } from 'framer-motion'
 import { 
   ShieldCheckIcon, 
@@ -11,9 +12,23 @@ import {
   ArrowRightIcon
 } from '@heroicons/react/24/outline'
 import ReportModal from '../components/ReportModal'
+import { authService, User } from '../utils/auth'
 
 const Home: NextPage = () => {
+  const router = useRouter()
   const [isReporting, setIsReporting] = useState(false)
+  const [user, setUser] = useState<User | null>(null)
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = authService.getToken()
+      if (token) {
+        const currentUser = await authService.getCurrentUser()
+        setUser(currentUser)
+      }
+    }
+    checkAuth()
+  }, [])
 
   const features = [
     {
@@ -61,12 +76,51 @@ const Home: NextPage = () => {
                 <a href="#about" className="text-gray-600 hover:text-purple-600">About</a>
                 <a href="#contact" className="text-gray-600 hover:text-purple-600">Contact</a>
               </div>
-              <button 
-                onClick={() => setIsReporting(true)}
-                className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
-              >
-                Report Incident
-              </button>
+              <div className="flex items-center space-x-4">
+                {user ? (
+                  <>
+                    <a 
+                      href="/dashboard"
+                      className="text-gray-600 hover:text-purple-600 px-4 py-2"
+                    >
+                      Dashboard
+                    </a>
+                    <button 
+                      onClick={() => authService.logout()}
+                      className="text-gray-600 hover:text-purple-600 px-4 py-2"
+                    >
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <a 
+                      href="/login"
+                      className="text-gray-600 hover:text-purple-600 px-4 py-2"
+                    >
+                      Login
+                    </a>
+                    <a 
+                      href="/register"
+                      className="border-2 border-purple-600 text-purple-600 px-4 py-2 rounded-lg hover:bg-purple-50 transition-colors"
+                    >
+                      Sign Up
+                    </a>
+                  </>
+                )}
+                <button 
+                  onClick={() => {
+                    if (user) {
+                      setIsReporting(true)
+                    } else {
+                      router.push('/login')
+                    }
+                  }}
+                  className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  Report Incident
+                </button>
+              </div>
             </div>
           </div>
         </nav>
@@ -89,7 +143,13 @@ const Home: NextPage = () => {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <button 
-                  onClick={() => setIsReporting(true)}
+                  onClick={() => {
+                    if (user) {
+                      setIsReporting(true)
+                    } else {
+                      router.push('/login')
+                    }
+                  }}
                   className="bg-purple-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-purple-700 transition-colors flex items-center justify-center"
                 >
                   Report Incident
@@ -178,7 +238,13 @@ const Home: NextPage = () => {
               Your voice matters. Report incidents safely and track progress transparently.
             </p>
             <button 
-              onClick={() => setIsReporting(true)}
+              onClick={() => {
+                if (user) {
+                  setIsReporting(true)
+                } else {
+                  router.push('/login')
+                }
+              }}
               className="bg-purple-600 text-white px-8 py-4 rounded-lg text-xl font-semibold hover:bg-purple-700 transition-colors"
             >
               Start Your Report

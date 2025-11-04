@@ -21,7 +21,7 @@ exports.protect = async (req, res, next) => {
 
     try {
       // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
 
       // Support tokens signed with either { id } or { userId }
       const decodedUserId = decoded.id || decoded.userId;
@@ -82,7 +82,7 @@ exports.optionalAuth = async (req, res, next) => {
 
     if (token) {
       try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
         const decodedUserId = decoded.id || decoded.userId;
         req.user = await User.findById(decodedUserId).select('-password');
       } catch (err) {
