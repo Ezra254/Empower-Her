@@ -4,9 +4,9 @@ import Head from 'next/head'
 import toast from 'react-hot-toast'
 import { motion } from 'framer-motion'
 import { authService, User } from '../utils/auth'
-import { 
-  HeartIcon, 
-  ShieldCheckIcon, 
+import {
+  HeartIcon,
+  ShieldCheckIcon,
   DocumentTextIcon,
   ClockIcon,
   PhoneIcon,
@@ -16,7 +16,9 @@ import {
   ChatBubbleLeftRightIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
-  SparklesIcon
+  SparklesIcon,
+  CreditCardIcon,
+  StarIcon
 } from '@heroicons/react/24/outline'
 import ReportModal from '../components/ReportModal'
 
@@ -42,8 +44,18 @@ interface Report {
     email?: string
     department?: string
   }>
+  statusUpdates: Array<{
+    status: string
+    message: string
+    updatedAt: string
+    updatedBy?: {
+      firstName: string
+      lastName: string
+    }
+  }>
   submittedAt: string
   lastUpdated: string
+  resolvedAt?: string
   caseNotes: Array<{ note: string; addedAt: string }>
   nextSteps: Array<{ step: string; completed: boolean }>
 }
@@ -109,10 +121,28 @@ const helplines = [
   }
 ]
 
+interface Subscription {
+  plan: string
+  status: string
+  currentPeriodEnd?: string
+  cancelAtPeriodEnd: boolean
+  usage: {
+    reportsThisMonth: number
+    lastResetDate: string
+  }
+  planDetails?: {
+    name: string
+    displayName: string
+    price: number
+    features: any
+  }
+}
+
 export default function Dashboard() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [reports, setReports] = useState<Report[]>([])
+  const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isReporting, setIsReporting] = useState(false)
   const [showAllReports, setShowAllReports] = useState(false)
@@ -144,6 +174,16 @@ export default function Dashboard() {
         if (response.ok) {
           const data = await response.json()
           setReports(data.reports || [])
+        }
+
+        // Get subscription info
+        const subResponse = await fetch(`${API_URL}/subscriptions/my-subscription`, {
+          headers: authService.getAuthHeaders()
+        })
+
+        if (subResponse.ok) {
+          const subData = await subResponse.json()
+          setSubscription(subData.subscription)
         }
       } catch (error) {
         console.error('Error loading dashboard:', error)
@@ -202,6 +242,19 @@ export default function Dashboard() {
                 <span className="ml-2 text-xl font-bold text-gray-900">EmpowerHer</span>
               </div>
               <div className="flex items-center space-x-4">
+                {subscription && subscription.plan === 'premium' && (
+                  <div className="hidden md:flex items-center bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-medium">
+                    <StarIcon className="h-4 w-4 mr-1" />
+                    Premium
+                  </div>
+                )}
+                <button
+                  onClick={() => router.push('/subscription')}
+                  className="text-gray-600 hover:text-purple-600 px-4 py-2 flex items-center text-sm"
+                >
+                  <CreditCardIcon className="h-5 w-5 mr-1" />
+                  Subscription
+                </button>
                 <span className="text-gray-700 hidden md:block">
                   Welcome, {user?.firstName} {user?.lastName}
                 </span>
@@ -224,12 +277,64 @@ export default function Dashboard() {
             animate={{ opacity: 1, y: 0 }}
             className="mb-8"
           >
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">
-              Welcome back, {user?.firstName}! 👋
-            </h1>
-            <p className="text-gray-600 text-lg">
-              You are safe here. Access your reports, get help, and find support.
-            </p>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                  Welcome back, {user?.firstName}! 👋
+                </h1>
+                <p className="text-gray-600 text-lg">
+                  You are safe here. Access your reports, get help, and find support.
+                </p>
+              </div>
+            </div>
+
+            {/* Subscription Status Banner */}
+            {subscription && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`rounded-lg p-4 mb-4 ${
+                  subscription.plan === 'premium'
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                    : 'bg-blue-50 border border-blue-200'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    {subscription.plan === 'premium' ? (
+                      <StarIcon className="h-6 w-6 mr-3" />
+                    ) : (
+                      <ShieldCheckIcon className="h-6 w-6 mr-3 text-blue-600" />
+                    )}
+                    <div>
+                      <h3 className="font-semibold text-lg">
+                        {subscription.plan === 'premium' ? 'Premium Plan Active' : 'Free Plan'}
+                      </h3>
+                      <p className={`text-sm ${subscription.plan === 'premium' ? 'text-white/90' : 'text-gray-600'}`}>
+                        {subscription.plan === 'premium' ? (
+                          subscription.cancelAtPeriodEnd ? (
+                            `Cancelling on ${subscription.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString() : 'end of period'}`
+                          ) : (
+                            `Renews on ${subscription.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString() : 'N/A'}`
+                          )
+                        ) : (
+                          `Reports used: ${subscription.usage?.reportsThisMonth || 0} / ${subscription.planDetails?.features?.maxReportsPerMonth || 3} this month`
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  {subscription.plan === 'free' && (
+                    <button
+                      onClick={() => router.push('/subscription')}
+                      className="bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 transition-colors flex items-center"
+                    >
+                      Upgrade to Premium
+                      <ArrowRightIcon className="h-5 w-5 ml-2" />
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            )}
           </motion.div>
 
           {/* Quick Actions Grid */}
@@ -409,9 +514,44 @@ export default function Dashboard() {
                             </div>
                           )}
 
+                          {report.statusUpdates && report.statusUpdates.length > 0 && (
+                            <div className="mt-4 pt-3 border-t">
+                              <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
+                                <ClockIcon className="h-4 w-4 mr-1" />
+                                Status Updates
+                              </h4>
+                              <div className="space-y-3">
+                                {report.statusUpdates.map((update, idx) => {
+                                  const updateStatusInfo = getStatusInfo(update.status)
+                                  return (
+                                    <div key={idx} className="bg-gray-50 p-3 rounded-lg">
+                                      <div className="flex items-start justify-between mb-2">
+                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${updateStatusInfo.color}`}>
+                                          {updateStatusInfo.label}
+                                        </span>
+                                        <span className="text-xs text-gray-500">
+                                          {formatDate(update.updatedAt)}
+                                        </span>
+                                      </div>
+                                      <p className="text-sm text-gray-700">{update.message}</p>
+                                      {update.updatedBy && (
+                                        <p className="text-xs text-gray-500 mt-1">
+                                          Updated by: {update.updatedBy.firstName} {update.updatedBy.lastName}
+                                        </p>
+                                      )}
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          )}
+
                           <div className="flex items-center text-sm text-gray-500 mt-3">
                             <ClockIcon className="h-4 w-4 mr-1" />
                             Submitted: {formatDate(report.submittedAt)}
+                            {report.lastUpdated && report.lastUpdated !== report.submittedAt && (
+                              <> • Last updated: {formatDate(report.lastUpdated)}</>
+                            )}
                           </div>
                         </div>
                       </div>

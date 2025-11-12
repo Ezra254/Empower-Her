@@ -9,7 +9,9 @@ import {
   ClockIcon,
   UserGroupIcon,
   HeartIcon,
-  ArrowRightIcon
+  ArrowRightIcon,
+  EnvelopeIcon,
+  PhoneIcon
 } from '@heroicons/react/24/outline'
 import ReportModal from '../components/ReportModal'
 import { authService, User } from '../utils/auth'
@@ -18,6 +20,8 @@ const Home: NextPage = () => {
   const router = useRouter()
   const [isReporting, setIsReporting] = useState(false)
   const [user, setUser] = useState<User | null>(null)
+  const [showAbout, setShowAbout] = useState(false)
+  const [showContact, setShowContact] = useState(false)
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -73,8 +77,18 @@ const Home: NextPage = () => {
               </div>
               <div className="hidden md:flex space-x-8">
                 <a href="#features" className="text-gray-600 hover:text-purple-600">Features</a>
-                <a href="#about" className="text-gray-600 hover:text-purple-600">About</a>
-                <a href="#contact" className="text-gray-600 hover:text-purple-600">Contact</a>
+                <button 
+                  onClick={() => setShowAbout(!showAbout)}
+                  className="text-gray-600 hover:text-purple-600"
+                >
+                  About
+                </button>
+                <button 
+                  onClick={() => setShowContact(!showContact)}
+                  className="text-gray-600 hover:text-purple-600"
+                >
+                  Contact
+                </button>
               </div>
               <div className="flex items-center space-x-4">
                 {user ? (
@@ -251,6 +265,154 @@ const Home: NextPage = () => {
             </button>
           </div>
         </section>
+
+        {/* About Section Modal */}
+        {showAbout && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            onClick={() => setShowAbout(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-8">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-3xl font-bold text-gray-900">About EmpowerHer</h2>
+                  <button
+                    onClick={() => setShowAbout(false)}
+                    className="text-gray-400 hover:text-gray-600 text-2xl"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="space-y-6 text-gray-700">
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-3">Our Mission</h3>
+                    <p className="leading-relaxed">
+                      EmpowerHer is a secure, accessible platform dedicated to empowering victims of gender-based violence 
+                      by providing a safe channel for reporting incidents and tracking case progress. We believe that every 
+                      victim deserves justice, support, and protection.
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-3">What We Do</h3>
+                    <ul className="list-disc list-inside space-y-2 leading-relaxed">
+                      <li>Provide a secure and confidential reporting system for gender-based violence incidents</li>
+                      <li>Generate unique OB (Occurrence Book) numbers for each reported case</li>
+                      <li>Enable real-time tracking of case status from submission to resolution</li>
+                      <li>Connect victims with support services, legal aid, and counseling</li>
+                      <li>Facilitate communication between victims and law enforcement</li>
+                      <li>Ensure transparency and accountability in case handling</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-3">Our Values</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="p-4 bg-purple-50 rounded-lg">
+                        <h4 className="font-semibold text-purple-900 mb-2">Confidentiality</h4>
+                        <p className="text-sm">Your privacy and security are our top priorities.</p>
+                      </div>
+                      <div className="p-4 bg-pink-50 rounded-lg">
+                        <h4 className="font-semibold text-pink-900 mb-2">Empowerment</h4>
+                        <p className="text-sm">We empower victims to speak up and seek justice.</p>
+                      </div>
+                      <div className="p-4 bg-blue-50 rounded-lg">
+                        <h4 className="font-semibold text-blue-900 mb-2">Transparency</h4>
+                        <p className="text-sm">Clear communication throughout the entire process.</p>
+                      </div>
+                      <div className="p-4 bg-green-50 rounded-lg">
+                        <h4 className="font-semibold text-green-900 mb-2">Support</h4>
+                        <p className="text-sm">Comprehensive support services at every step.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* Contact Section Modal */}
+        {showContact && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            onClick={() => setShowContact(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-8">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-3xl font-bold text-gray-900">Contact Us</h2>
+                  <button
+                    onClick={() => setShowContact(false)}
+                    className="text-gray-400 hover:text-gray-600 text-2xl"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">Get in Touch</h3>
+                    <div className="space-y-4">
+                      <div className="flex items-start">
+                        <EnvelopeIcon className="h-5 w-5 text-purple-600 mr-3 mt-1" />
+                        <div>
+                          <p className="font-medium text-gray-900">Email</p>
+                          <a href="mailto:support@empowerher.org" className="text-purple-600 hover:text-purple-700">
+                            support@empowerher.org
+                          </a>
+                        </div>
+                      </div>
+                      <div className="flex items-start">
+                        <PhoneIcon className="h-5 w-5 text-purple-600 mr-3 mt-1" />
+                        <div>
+                          <p className="font-medium text-gray-900">Phone</p>
+                          <a href="tel:+15551234567" className="text-purple-600 hover:text-purple-700">
+                            +1 (555) 123-4567
+                          </a>
+                        </div>
+                      </div>
+                      <div className="flex items-start">
+                        <ClockIcon className="h-5 w-5 text-purple-600 mr-3 mt-1" />
+                        <div>
+                          <p className="font-medium text-gray-900">Operating Hours</p>
+                          <p className="text-gray-600">24/7 Support Available</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="border-t pt-6">
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">Emergency Contacts</h3>
+                    <div className="space-y-3">
+                      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="font-semibold text-red-900 mb-1">Emergency Services</p>
+                        <a href="tel:911" className="text-red-600 font-medium text-lg">911</a>
+                        <p className="text-sm text-red-700 mt-1">Call immediately in case of emergency</p>
+                      </div>
+                      <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                        <p className="font-semibold text-purple-900 mb-1">GBV Helpline</p>
+                        <a href="tel:0800000999" className="text-purple-600 font-medium">0800-000-999</a>
+                        <p className="text-sm text-purple-700 mt-1">24/7 confidential support</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
 
         {/* Footer */}
         <footer className="bg-gray-900 text-white py-12">

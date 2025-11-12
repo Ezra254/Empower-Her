@@ -1,7 +1,9 @@
 const express = require('express')
 const { body, validationResult } = require('express-validator')
 const Report = require('../models/Report')
+const User = require('../models/User')
 const { protect } = require('../middleware/auth')
+const { checkReportLimit } = require('../middleware/subscription')
 const router = express.Router()
 
 // Test endpoint
@@ -12,7 +14,7 @@ router.get('/test', (req, res) => {
 // @route   POST /api/reports
 // @desc    Submit a new incident report
 // @access  Private (requires authentication)
-router.post('/', protect, [
+router.post('/', protect, checkReportLimit, [
   body('firstName').trim().isLength({ min: 2 }).withMessage('First name must be at least 2 characters'),
   body('lastName').trim().isLength({ min: 2 }).withMessage('Last name must be at least 2 characters'),
   body('email').isEmail().withMessage('Please provide a valid email'),
@@ -100,7 +102,33 @@ router.post('/', protect, [
       submittedAt: new Date()
     })
 
+    // Add initial status update
+    report.statusUpdates.push({
+      status: 'submitted',
+      message: 'Report submitted successfully. Your case is under review.',
+      updatedBy: userId,
+      updatedAt: new Date(),
+      isPublic: true
+    })
+
     await report.save()
+
+    // Update user's report count for the month
+    const user = await User.findById(userId)
+    if (user) {
+      // Reset monthly count if it's a new month
+      const now = new Date()
+      const lastReset = new Date(user.usage.lastResetDate)
+      const isNewMonth = now.getMonth() !== lastReset.getMonth() || now.getFullYear() !== lastReset.getFullYear()
+
+      if (isNewMonth) {
+        user.usage.reportsThisMonth = 0
+        user.usage.lastResetDate = now
+      }
+
+      user.usage.reportsThisMonth = (user.usage.reportsThisMonth || 0) + 1
+      await user.save()
+    }
 
     console.log('✅ Report saved successfully:', {
       obNumber: report.obNumber,
@@ -258,6 +286,7 @@ router.get('/user/my-reports', protect, async (req, res) => {
         },
         assignedOfficer: report.assignedOfficer,
         handlingParties: report.handlingParties || [],
+        statusUpdates: report.statusUpdates?.filter(update => update.isPublic).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)) || [],
         submittedAt: report.submittedAt,
         lastUpdated: report.lastUpdated,
         resolvedAt: report.resolvedAt,

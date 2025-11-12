@@ -65,6 +65,7 @@ app.use('/api/auth', require('./routes/auth'))
 app.use('/api/reports', require('./routes/reports'))
 app.use('/api/cases', require('./routes/cases'))
 app.use('/api/admin', require('./routes/admin'))
+app.use('/api/subscriptions', require('./routes/subscriptions'))
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -77,7 +78,8 @@ app.get('/', (req, res) => {
       reports: '/api/reports',
       auth: '/api/auth',
       cases: '/api/cases',
-      admin: '/api/admin'
+      admin: '/api/admin',
+      subscriptions: '/api/subscriptions'
     }
   })
 })

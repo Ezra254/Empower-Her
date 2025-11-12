@@ -7,6 +7,10 @@ export interface User {
   lastName: string
   email: string
   role: string
+  subscription?: {
+    plan: string
+    status: string
+  }
 }
 
 export const authService = {
@@ -54,7 +58,7 @@ export const authService = {
     return data
   },
 
-  // Login user
+  // Login user (supports email or admin ID)
   login: async (email: string, password: string) => {
     const response = await fetch(`${API_URL}/auth/login`, {
       method: 'POST',

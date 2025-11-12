@@ -129,6 +129,28 @@ const reportSchema = new mongoose.Schema({
     email: String,
     badgeNumber: String
   }],
+  statusUpdates: [{
+    status: {
+      type: String,
+      required: true
+    },
+    message: {
+      type: String,
+      required: true
+    },
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now
+    },
+    isPublic: {
+      type: Boolean,
+      default: true
+    }
+  }],
   caseNotes: [{
     note: {
       type: String,

@@ -19,7 +19,13 @@ export default function Login() {
     try {
       const response = await authService.login(email, password)
       toast.success('Login successful!')
-      router.push('/dashboard')
+      
+      // Redirect admin to admin dashboard, regular users to user dashboard
+      if (response.user?.role === 'admin') {
+        router.push('/admin/dashboard')
+      } else {
+        router.push('/dashboard')
+      }
     } catch (error: any) {
       toast.error(error.message || 'Login failed. Please try again.')
     } finally {
@@ -50,17 +56,20 @@ export default function Login() {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Email Address
+                  Email Address or Admin ID
                 </label>
                 <input
                   id="email"
-                  type="email"
+                  type="text"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="input-field"
-                  placeholder="Enter your email"
+                  placeholder="Enter your email or Admin ID (e.g., ADMIN-001)"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Admin: Use ADMIN-{`{ID}`} format. Regular users: Use email address.
+                </p>
               </div>
 
               <div>

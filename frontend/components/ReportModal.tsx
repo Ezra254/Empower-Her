@@ -214,6 +214,18 @@ export default function ReportModal({ isOpen, onClose }: ReportModalProps) {
       }
 
       if (!response.ok) {
+        // Handle subscription limit errors - redirect to subscription page
+        if (payload?.requiresUpgrade && payload?.message) {
+          toast.error(payload.message, {
+            duration: 5000
+          })
+          onClose()
+          setTimeout(() => {
+            router.push('/subscription')
+          }, 1500)
+          return
+        }
+
         // Try to show validation messages if available
         if (payload?.errors?.length) {
           const firstErr = payload.errors[0]

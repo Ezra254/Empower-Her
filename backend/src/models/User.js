@@ -56,6 +56,38 @@ const userSchema = new mongoose.Schema({
       relationship: String,
       phone: String
     }
+  },
+  subscription: {
+    plan: {
+      type: String,
+      enum: ['free', 'premium'],
+      default: 'free'
+    },
+    subscriptionId: {
+      type: String,
+      default: null
+    },
+    status: {
+      type: String,
+      enum: ['active', 'cancelled', 'expired', 'trial'],
+      default: 'active'
+    },
+    currentPeriodStart: Date,
+    currentPeriodEnd: Date,
+    cancelAtPeriodEnd: {
+      type: Boolean,
+      default: false
+    }
+  },
+  usage: {
+    reportsThisMonth: {
+      type: Number,
+      default: 0
+    },
+    lastResetDate: {
+      type: Date,
+      default: Date.now
+    }
   }
 }, {
   timestamps: true

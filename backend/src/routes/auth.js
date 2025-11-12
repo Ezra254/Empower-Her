@@ -59,7 +59,11 @@ router.post('/register', [
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        role: user.role
+        role: user.role,
+        subscription: {
+          plan: user.subscription?.plan || 'free',
+          status: user.subscription?.status || 'active'
+        }
       }
     })
 
@@ -73,10 +77,10 @@ router.post('/register', [
 })
 
 // @route   POST /api/auth/login
-// @desc    Login user
+// @desc    Login user (supports email or admin ID)
 // @access  Public
 router.post('/login', [
-  body('email').isEmail().withMessage('Please provide a valid email'),
+  body('email').notEmpty().withMessage('Email or Admin ID is required'),
   body('password').notEmpty().withMessage('Password is required')
 ], async (req, res) => {
   try {
@@ -90,8 +94,22 @@ router.post('/login', [
 
     const { email, password } = req.body
 
-    // Find user
-    const user = await User.findOne({ email })
+    // Check if it's an admin ID (starts with 'ADMIN-' or 'admin-')
+    let user
+    if (email.startsWith('ADMIN-') || email.startsWith('admin-')) {
+      // Admin login by ID
+      const adminId = email.toUpperCase().replace('ADMIN-', '')
+      user = await User.findOne({ 
+        $or: [
+          { badgeNumber: adminId, role: 'admin' },
+          { email: email.toLowerCase(), role: 'admin' }
+        ]
+      })
+    } else {
+      // Regular user login by email
+      user = await User.findOne({ email: email.toLowerCase() })
+    }
+
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' })
     }
@@ -121,7 +139,11 @@ router.post('/login', [
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        role: user.role
+        role: user.role,
+        subscription: {
+          plan: user.subscription?.plan || 'free',
+          status: user.subscription?.status || 'active'
+        }
       }
     })
 
