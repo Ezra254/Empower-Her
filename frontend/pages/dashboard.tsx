@@ -183,7 +183,18 @@ export default function Dashboard() {
 
         if (subResponse.ok) {
           const subData = await subResponse.json()
-          setSubscription(subData.subscription)
+          setSubscription(subData.subscription || null)
+          console.log('Subscription loaded in dashboard:', subData.subscription)
+        } else {
+          const errorData = await subResponse.json().catch(() => ({}))
+          console.error('Failed to load subscription:', subResponse.status, errorData)
+          // Default to free plan if subscription doesn't load
+          setSubscription({ 
+            plan: 'free', 
+            status: 'active', 
+            usage: { reportsThisMonth: 0, lastResetDate: new Date().toISOString() },
+            planDetails: { features: { maxReportsPerMonth: 3 } }
+          })
         }
       } catch (error) {
         console.error('Error loading dashboard:', error)
@@ -216,18 +227,21 @@ export default function Dashboard() {
 
   // Check if user can submit more reports
   const canSubmitReport = () => {
-    if (!subscription) return false
+    // If subscription not loaded yet, assume can submit (will be checked on backend)
+    if (!subscription) return true
     
     // Premium users have unlimited reports
     if (subscription.plan === 'premium' && subscription.status === 'active') {
       return true
     }
 
-    // Free users have a limit
+    // Free users have a limit (default to 3 if not specified)
     const reportsUsed = subscription.usage?.reportsThisMonth || 0
     const maxReports = subscription.planDetails?.features?.maxReportsPerMonth || 3
     
-    return reportsUsed < maxReports
+    const canSubmit = reportsUsed < maxReports
+    console.log('canSubmitReport check:', { reportsUsed, maxReports, canSubmit, subscription })
+    return canSubmit
   }
 
   const handleReportClick = () => {

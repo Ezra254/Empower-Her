@@ -85,25 +85,50 @@ export default function SubscriptionPage() {
         const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
 
         // Get plans
-        const plansRes = await fetch(`${API_URL}/subscriptions/plans`, {
-          headers: authService.getAuthHeaders()
-        })
-        if (plansRes.ok) {
-          const plansData = await plansRes.json()
-          setPlans(plansData.plans || [])
-          console.log('Plans loaded:', plansData.plans)
-        } else {
-          console.error('Failed to load plans:', plansRes.status, plansRes.statusText)
-          toast.error('Failed to load subscription plans. Please refresh the page.')
+        try {
+          const plansRes = await fetch(`${API_URL}/subscriptions/plans`, {
+            headers: authService.getAuthHeaders()
+          })
+          if (plansRes.ok) {
+            const plansData = await plansRes.json()
+            const loadedPlans = plansData.plans || []
+            setPlans(loadedPlans)
+            console.log('Plans loaded:', loadedPlans)
+            
+            if (loadedPlans.length === 0) {
+              console.warn('No plans returned from API')
+              toast.error('No subscription plans available. Please contact support.')
+            }
+          } else {
+            const errorData = await plansRes.json().catch(() => ({}))
+            console.error('Failed to load plans:', plansRes.status, plansRes.statusText, errorData)
+            toast.error(`Failed to load subscription plans (${plansRes.status}). Please refresh the page.`)
+          }
+        } catch (error) {
+          console.error('Error fetching plans:', error)
+          toast.error('Network error loading plans. Please check your connection.')
         }
 
         // Get subscription
-        const subRes = await fetch(`${API_URL}/subscriptions/my-subscription`, {
-          headers: authService.getAuthHeaders()
-        })
-        if (subRes.ok) {
-          const subData = await subRes.json()
-          setSubscription(subData.subscription)
+        try {
+          const subRes = await fetch(`${API_URL}/subscriptions/my-subscription`, {
+            headers: authService.getAuthHeaders()
+          })
+          if (subRes.ok) {
+            const subData = await subRes.json()
+            setSubscription(subData.subscription || null)
+            console.log('Subscription loaded:', subData.subscription)
+          } else {
+            const errorData = await subRes.json().catch(() => ({}))
+            console.error('Failed to load subscription:', subRes.status, subRes.statusText, errorData)
+            // Don't show error toast here - subscription might not exist yet for new users
+            // Default to free plan if subscription doesn't load
+            setSubscription({ plan: 'free', status: 'active', usage: { reportsThisMonth: 0, lastResetDate: new Date().toISOString() } })
+          }
+        } catch (error) {
+          console.error('Error fetching subscription:', error)
+          // Default to free plan on error
+          setSubscription({ plan: 'free', status: 'active', usage: { reportsThisMonth: 0, lastResetDate: new Date().toISOString() } })
         }
       } catch (error) {
         console.error('Error loading subscription page:', error)
@@ -117,10 +142,16 @@ export default function SubscriptionPage() {
   }, [router])
 
   const handleSubscribe = async (planName: string) => {
-    if (isSubscribing) return
+    console.log('handleSubscribe called with:', planName, { isSubscribing, currentPlan })
+    
+    if (isSubscribing) {
+      console.log('Already subscribing, ignoring click')
+      return
+    }
 
     // Free plan - subscribe directly
     if (planName === 'free') {
+      console.log('Subscribing to free plan')
       setIsSubscribing(true)
       try {
         const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
@@ -166,6 +197,7 @@ export default function SubscriptionPage() {
       }
     } else {
       // Premium plan - show payment modal
+      console.log('Opening payment modal for premium plan')
       setSelectedPlan(planName)
       setShowPaymentModal(true)
     }
@@ -328,6 +360,19 @@ export default function SubscriptionPage() {
   const premiumPlan = plans.find(p => p.name === 'premium')
   const currentPlan = subscription?.plan || 'free'
 
+  // Debug logging
+  useEffect(() => {
+    console.log('Subscription Page State:', {
+      plans: plans.length,
+      freePlan: !!freePlan,
+      premiumPlan: !!premiumPlan,
+      currentPlan,
+      subscription,
+      isSubscribing,
+      showPaymentModal
+    })
+  }, [plans, freePlan, premiumPlan, currentPlan, subscription, isSubscribing, showPaymentModal])
+
   return (
     <>
       <Head>
@@ -472,15 +517,23 @@ export default function SubscriptionPage() {
                 </ul>
 
                 <button
-                  onClick={() => handleSubscribe('free')}
-                  disabled={currentPlan === 'free' || isSubscribing}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    console.log('Free button clicked', { currentPlan, isSubscribing, freePlan })
+                    handleSubscribe('free')
+                  }}
+                  disabled={currentPlan === 'free' || isSubscribing || !freePlan}
                   className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-200 ${
                     currentPlan === 'free'
                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                      : 'bg-gray-600 text-white hover:bg-gray-700 hover:shadow-lg transform hover:-translate-y-0.5'
+                      : isSubscribing || !freePlan
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-gray-600 text-white hover:bg-gray-700 hover:shadow-lg transform hover:-translate-y-0.5 active:scale-95'
                   }`}
+                  aria-label={currentPlan === 'free' ? 'Current Free Plan' : 'Select Free Plan'}
                 >
-                  {currentPlan === 'free' ? '✓ Current Plan' : isSubscribing ? 'Processing...' : 'Select Free Plan'}
+                  {currentPlan === 'free' ? '✓ Current Plan' : isSubscribing ? 'Processing...' : !freePlan ? 'Loading...' : 'Select Free Plan'}
                 </button>
               </motion.div>
             ) : (
@@ -555,18 +608,28 @@ export default function SubscriptionPage() {
                 </ul>
 
                 <button
-                  onClick={() => handleSubscribe('premium')}
-                  disabled={currentPlan === 'premium' || isSubscribing}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    console.log('Premium button clicked', { currentPlan, isSubscribing, premiumPlan })
+                    handleSubscribe('premium')
+                  }}
+                  disabled={currentPlan === 'premium' || isSubscribing || !premiumPlan}
                   className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-200 ${
                     currentPlan === 'premium'
                       ? 'bg-white/20 text-white cursor-not-allowed'
-                      : 'bg-white text-purple-600 hover:bg-purple-50 hover:shadow-2xl transform hover:-translate-y-1 hover:scale-105'
+                      : isSubscribing || !premiumPlan
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-white text-purple-600 hover:bg-purple-50 hover:shadow-2xl transform hover:-translate-y-1 hover:scale-105 active:scale-95'
                   }`}
+                  aria-label={currentPlan === 'premium' ? 'Current Premium Plan' : `Upgrade to Premium for ${premiumPlan?.price}/${premiumPlan?.interval}`}
                 >
                   {currentPlan === 'premium' ? (
                     '✓ Current Plan'
                   ) : isSubscribing ? (
                     'Processing...'
+                  ) : !premiumPlan ? (
+                    'Loading...'
                   ) : (
                     <>
                       Upgrade to Premium - ${premiumPlan.price}/{premiumPlan.interval}

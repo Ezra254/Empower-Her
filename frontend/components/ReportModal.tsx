@@ -148,6 +148,7 @@ export default function ReportModal({ isOpen, onClose }: ReportModalProps) {
     }
 
     // Check report limit before submission
+    // Note: Backend will also enforce this limit, but we check here for better UX
     if (subscription) {
       // Premium users have unlimited reports
       const isPremium = subscription.plan === 'premium' && subscription.status === 'active'
@@ -155,6 +156,8 @@ export default function ReportModal({ isOpen, onClose }: ReportModalProps) {
       if (!isPremium) {
         const reportsUsed = subscription.usage?.reportsThisMonth || 0
         const maxReports = subscription.planDetails?.features?.maxReportsPerMonth || 3
+        
+        console.log('Report limit check before submission:', { reportsUsed, maxReports, isPremium })
         
         if (reportsUsed >= maxReports) {
           toast.error(`You have reached your monthly report limit of ${maxReports} reports. Upgrade to premium for unlimited reports.`, {
@@ -167,6 +170,9 @@ export default function ReportModal({ isOpen, onClose }: ReportModalProps) {
           return
         }
       }
+    } else {
+      // If subscription not loaded, we'll let backend enforce the limit
+      console.warn('Subscription data not loaded, backend will enforce limit')
     }
 
     console.log('✅ Form validation passed, onSubmit called with data:', data)
