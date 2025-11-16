@@ -2,9 +2,10 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  // Enable standalone output for Docker deployments
-  output: 'standalone',
-  // Environment variables
+  // Only use standalone output for Docker builds, not Vercel
+  // Vercel has its own optimized build process
+  ...(process.env.DOCKER_BUILD === 'true' && { output: 'standalone' }),
+  // Environment variables (handled automatically by Vercel)
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
     NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
