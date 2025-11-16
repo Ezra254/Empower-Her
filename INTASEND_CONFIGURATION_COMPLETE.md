@@ -189,3 +189,5 @@ Your IntaSend integration is configured and ready for testing. Follow the steps 
 If you encounter any issues, check the troubleshooting section or refer to IntaSend's documentation.
 
 
+
+

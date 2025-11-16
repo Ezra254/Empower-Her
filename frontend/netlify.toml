@@ -1,0 +1,19 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[context.production.environment]
+  NEXT_PUBLIC_API_URL = "https://your-backend-url.com/api"
+  NEXTAUTH_URL = "https://your-frontend-url.netlify.app"
+  NEXTAUTH_SECRET = "your-nextauth-secret-key"
+
+[context.deploy-preview.environment]
+  NEXT_PUBLIC_API_URL = "https://your-backend-url.com/api"
+
+
