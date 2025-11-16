@@ -201,7 +201,7 @@ export default function SubscriptionPage() {
           // For card payments, redirect to payment link
           setPaymentLink(data.payment.paymentLink)
           window.open(data.payment.paymentLink, '_blank')
-          toast.info('Please complete the payment in the new window')
+          toast('Please complete the payment in the new window', { icon: 'ℹ️' })
         } else if (paymentMethod === 'mpesa') {
           // For M-Pesa, show instructions
           toast.success(data.instructions || 'Please check your phone for M-Pesa prompt')
