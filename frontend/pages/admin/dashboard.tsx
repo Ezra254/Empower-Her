@@ -220,8 +220,13 @@ export default function AdminDashboard() {
     setStatusForm({
       status: report.status,
       message: '',
-      assignedOfficer: report.assignedOfficer || { name: '', phone: '', email: '', department: '' },
-      handlingParties: report.handlingParties || []
+      assignedOfficer: report.assignedOfficer ? {
+        name: report.assignedOfficer.name ?? '',
+        phone: report.assignedOfficer.phone ?? '',
+        email: report.assignedOfficer.email ?? '',
+        department: report.assignedOfficer.department ?? ''
+      } : { name: '', phone: '', email: '', department: '' },
+      handlingParties: report.handlingParties ?? []
     })
     setShowStatusModal(true)
   }
