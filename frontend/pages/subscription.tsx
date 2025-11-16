@@ -91,6 +91,10 @@ export default function SubscriptionPage() {
         if (plansRes.ok) {
           const plansData = await plansRes.json()
           setPlans(plansData.plans || [])
+          console.log('Plans loaded:', plansData.plans)
+        } else {
+          console.error('Failed to load plans:', plansRes.status, plansRes.statusText)
+          toast.error('Failed to load subscription plans. Please refresh the page.')
         }
 
         // Get subscription
@@ -369,17 +373,24 @@ export default function SubscriptionPage() {
           )}
 
           {/* Plans Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-12">
             {/* Free Plan */}
-            {freePlan && (
+            {freePlan ? (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className={`bg-white rounded-lg shadow-lg p-8 ${
-                  currentPlan === 'free' ? 'ring-2 ring-purple-500' : ''
+                className={`bg-white rounded-lg shadow-lg p-8 border-2 ${
+                  currentPlan === 'free' ? 'border-purple-500 ring-2 ring-purple-200' : 'border-gray-200'
                 }`}
               >
+                {currentPlan === 'free' && (
+                  <div className="mb-4 text-center">
+                    <span className="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-semibold">
+                      Current Plan
+                    </span>
+                  </div>
+                )}
                 <div className="text-center mb-6">
                   <h3 className="text-2xl font-bold text-gray-900 mb-2">{freePlan.displayName}</h3>
                   <div className="text-4xl font-bold text-gray-900 mb-2">
@@ -423,30 +434,41 @@ export default function SubscriptionPage() {
                 <button
                   onClick={() => handleSubscribe('free')}
                   disabled={currentPlan === 'free' || isSubscribing}
-                  className={`w-full py-3 rounded-lg font-semibold transition-colors ${
+                  className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-200 ${
                     currentPlan === 'free'
                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                      : 'bg-gray-600 text-white hover:bg-gray-700'
+                      : 'bg-gray-600 text-white hover:bg-gray-700 hover:shadow-lg transform hover:-translate-y-0.5'
                   }`}
                 >
-                  {currentPlan === 'free' ? 'Current Plan' : 'Select Free Plan'}
+                  {currentPlan === 'free' ? '✓ Current Plan' : isSubscribing ? 'Processing...' : 'Select Free Plan'}
                 </button>
               </motion.div>
+            ) : (
+              <div className="bg-white rounded-lg shadow-lg p-8 border-2 border-gray-200">
+                <div className="text-center py-8">
+                  <div className="animate-pulse text-gray-400">Loading Free Plan...</div>
+                </div>
+              </div>
             )}
 
             {/* Premium Plan */}
-            {premiumPlan && (
+            {premiumPlan ? (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className={`bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg shadow-xl p-8 text-white relative ${
-                  currentPlan === 'premium' ? 'ring-4 ring-purple-300' : ''
+                className={`bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg shadow-xl p-8 text-white relative border-2 ${
+                  currentPlan === 'premium' ? 'border-yellow-400 ring-4 ring-yellow-200' : 'border-transparent'
                 }`}
               >
                 {currentPlan === 'premium' && (
                   <div className="absolute top-4 right-4 bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-sm font-semibold">
                     Current Plan
+                  </div>
+                )}
+                {currentPlan !== 'premium' && (
+                  <div className="absolute top-4 right-4 bg-white/20 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                    Most Popular
                   </div>
                 )}
                 <div className="text-center mb-6">
@@ -495,15 +517,30 @@ export default function SubscriptionPage() {
                 <button
                   onClick={() => handleSubscribe('premium')}
                   disabled={currentPlan === 'premium' || isSubscribing}
-                  className={`w-full py-3 rounded-lg font-semibold transition-colors ${
+                  className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-200 ${
                     currentPlan === 'premium'
                       ? 'bg-white/20 text-white cursor-not-allowed'
-                      : 'bg-white text-purple-600 hover:bg-purple-50'
+                      : 'bg-white text-purple-600 hover:bg-purple-50 hover:shadow-2xl transform hover:-translate-y-1 hover:scale-105'
                   }`}
                 >
-                  {currentPlan === 'premium' ? 'Current Plan' : isSubscribing ? 'Processing...' : `Subscribe for $${premiumPlan?.price}/${premiumPlan?.interval}`}
+                  {currentPlan === 'premium' ? (
+                    '✓ Current Plan'
+                  ) : isSubscribing ? (
+                    'Processing...'
+                  ) : (
+                    <>
+                      Upgrade to Premium - ${premiumPlan.price}/{premiumPlan.interval}
+                      <ArrowRightIcon className="h-5 w-5 inline-block ml-2" />
+                    </>
+                  )}
                 </button>
               </motion.div>
+            ) : (
+              <div className="bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg shadow-xl p-8 text-white">
+                <div className="text-center py-8">
+                  <div className="animate-pulse text-white/70">Loading Premium Plan...</div>
+                </div>
+              </div>
             )}
           </div>
 
