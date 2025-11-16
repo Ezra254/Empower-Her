@@ -94,14 +94,16 @@ const checkReportLimit = async (req, res, next) => {
       await user.save()
     }
 
-    // Check if user has reached the limit
+    // Check if user has reached the limit (>= means after N reports, the N+1th is blocked)
+    // Example: maxReportsPerMonth = 3, so after 3 reports (reportsThisMonth = 3), the 4th is blocked
     if (user.usage.reportsThisMonth >= plan.features.maxReportsPerMonth) {
       return res.status(403).json({ 
-        message: `You have reached your monthly report limit of ${plan.features.maxReportsPerMonth} reports. Upgrade to premium for unlimited reports.`,
+        message: `You have reached your monthly report limit of ${plan.features.maxReportsPerMonth} reports. Please upgrade to premium for unlimited reports.`,
         requiresUpgrade: true,
         currentPlan: 'free',
         reportsUsed: user.usage.reportsThisMonth,
-        reportsLimit: plan.features.maxReportsPerMonth
+        reportsLimit: plan.features.maxReportsPerMonth,
+        remainingReports: 0
       })
     }
 

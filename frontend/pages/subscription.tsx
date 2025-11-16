@@ -211,21 +211,61 @@ export default function SubscriptionPage() {
           toast.success(data.instructions || 'Please check your phone for M-Pesa prompt')
         }
 
-        // Close modal and reload subscription data after a delay
+        // Close modal after a short delay
         setTimeout(() => {
           setShowPaymentModal(false)
           setSelectedPlan(null)
           setPhoneNumber('')
           setPaymentLink(null)
-          
-          // Reload subscription data
-          const subRes = fetch(`${API_URL}/subscriptions/my-subscription`, {
-            headers: authService.getAuthHeaders()
-          })
-          subRes.then(res => res.json()).then(subData => {
-            setSubscription(subData.subscription)
-          })
         }, 2000)
+
+        // Reload subscription data after payment initiation (will update when webhook processes)
+        // Poll for subscription update if payment method is card (user completes in new window)
+        if (paymentMethod === 'card') {
+          const pollSubscription = setInterval(async () => {
+            try {
+              const subRes = await fetch(`${API_URL}/subscriptions/my-subscription`, {
+                headers: authService.getAuthHeaders()
+              })
+              if (subRes.ok) {
+                const subData = await subRes.json()
+                if (subData.subscription?.plan === 'premium' && subData.subscription?.status === 'active') {
+                  setSubscription(subData.subscription)
+                  toast.success('Subscription activated! You now have unlimited reports.')
+                  clearInterval(pollSubscription)
+                  // Reload page to refresh all data
+                  window.location.reload()
+                }
+              }
+            } catch (error) {
+              console.error('Error polling subscription:', error)
+            }
+          }, 3000) // Poll every 3 seconds
+
+          // Stop polling after 5 minutes
+          setTimeout(() => {
+            clearInterval(pollSubscription)
+          }, 300000)
+        } else {
+          // For M-Pesa, reload subscription data after a delay (webhook should process quickly)
+          setTimeout(async () => {
+            try {
+              const subRes = await fetch(`${API_URL}/subscriptions/my-subscription`, {
+                headers: authService.getAuthHeaders()
+              })
+              if (subRes.ok) {
+                const subData = await subRes.json()
+                setSubscription(subData.subscription)
+                if (subData.subscription?.plan === 'premium' && subData.subscription?.status === 'active') {
+                  toast.success('Subscription activated! You now have unlimited reports.')
+                  window.location.reload()
+                }
+              }
+            } catch (error) {
+              console.error('Error reloading subscription:', error)
+            }
+          }, 5000)
+        }
       } else {
         toast.error(data.message || 'Failed to initiate payment')
       }

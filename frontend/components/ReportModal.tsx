@@ -83,6 +83,7 @@ export default function ReportModal({ isOpen, onClose }: ReportModalProps) {
   const totalSteps = 4
   const [user, setUser] = useState<User | null>(null)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+  const [subscription, setSubscription] = useState<any>(null)
 
   const {
     register,
@@ -97,7 +98,7 @@ export default function ReportModal({ isOpen, onClose }: ReportModalProps) {
     shouldUnregister: false // Keep form values when navigating between steps
   })
 
-  // Check authentication when modal opens
+  // Check authentication and subscription when modal opens
   useEffect(() => {
     if (isOpen) {
       const checkAuth = async () => {
@@ -106,6 +107,20 @@ export default function ReportModal({ isOpen, onClose }: ReportModalProps) {
         if (token) {
           const currentUser = await authService.getCurrentUser()
           setUser(currentUser)
+          
+          // Check subscription status
+          const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
+          try {
+            const subRes = await fetch(`${API_URL}/subscriptions/my-subscription`, {
+              headers: authService.getAuthHeaders()
+            })
+            if (subRes.ok) {
+              const subData = await subRes.json()
+              setSubscription(subData.subscription)
+            }
+          } catch (error) {
+            console.error('Error loading subscription:', error)
+          }
         } else {
           setUser(null)
         }
@@ -130,6 +145,28 @@ export default function ReportModal({ isOpen, onClose }: ReportModalProps) {
       onClose()
       router.push('/login')
       return
+    }
+
+    // Check report limit before submission
+    if (subscription) {
+      // Premium users have unlimited reports
+      const isPremium = subscription.plan === 'premium' && subscription.status === 'active'
+      
+      if (!isPremium) {
+        const reportsUsed = subscription.usage?.reportsThisMonth || 0
+        const maxReports = subscription.planDetails?.features?.maxReportsPerMonth || 3
+        
+        if (reportsUsed >= maxReports) {
+          toast.error(`You have reached your monthly report limit of ${maxReports} reports. Upgrade to premium for unlimited reports.`, {
+            duration: 5000
+          })
+          onClose()
+          setTimeout(() => {
+            router.push('/subscription')
+          }, 1500)
+          return
+        }
+      }
     }
 
     console.log('✅ Form validation passed, onSubmit called with data:', data)

@@ -214,6 +214,35 @@ export default function Dashboard() {
 
   const displayedReports = showAllReports ? reports : reports.slice(0, 3)
 
+  // Check if user can submit more reports
+  const canSubmitReport = () => {
+    if (!subscription) return false
+    
+    // Premium users have unlimited reports
+    if (subscription.plan === 'premium' && subscription.status === 'active') {
+      return true
+    }
+
+    // Free users have a limit
+    const reportsUsed = subscription.usage?.reportsThisMonth || 0
+    const maxReports = subscription.planDetails?.features?.maxReportsPerMonth || 3
+    
+    return reportsUsed < maxReports
+  }
+
+  const handleReportClick = () => {
+    if (!canSubmitReport()) {
+      toast.error(`You have reached your monthly report limit of ${subscription?.planDetails?.features?.maxReportsPerMonth || 3} reports. Upgrade to premium for unlimited reports.`, {
+        duration: 5000
+      })
+      setTimeout(() => {
+        router.push('/subscription')
+      }, 1500)
+      return
+    }
+    setIsReporting(true)
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center">
@@ -317,9 +346,14 @@ export default function Dashboard() {
                           ) : (
                             `Renews on ${subscription.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString() : 'N/A'}`
                           )
-                        ) : (
-                          `Reports used: ${subscription.usage?.reportsThisMonth || 0} / ${subscription.planDetails?.features?.maxReportsPerMonth || 3} this month`
-                        )}
+                          ) : (
+                            <>
+                              Reports used: {subscription.usage?.reportsThisMonth || 0} / {subscription.planDetails?.features?.maxReportsPerMonth || 3} this month
+                              {!canSubmitReport() && (
+                                <span className="ml-2 text-red-600 font-semibold">• Limit Reached!</span>
+                              )}
+                            </>
+                          )}
                       </p>
                     </div>
                   </div>
@@ -344,17 +378,39 @@ export default function Dashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              onClick={() => setIsReporting(true)}
-              className="bg-white rounded-lg shadow-lg p-6 cursor-pointer hover:shadow-xl transition-shadow border-2 border-transparent hover:border-purple-500"
+              onClick={handleReportClick}
+              className={`bg-white rounded-lg shadow-lg p-6 cursor-pointer hover:shadow-xl transition-shadow border-2 ${
+                canSubmitReport() ? 'border-transparent hover:border-purple-500' : 'border-red-200 hover:border-red-300 opacity-75'
+              }`}
             >
-              <div className="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mb-4">
-                <DocumentTextIcon className="h-6 w-6 text-purple-600" />
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${
+                canSubmitReport() ? 'bg-purple-100' : 'bg-red-100'
+              }`}>
+                <DocumentTextIcon className={`h-6 w-6 ${
+                  canSubmitReport() ? 'text-purple-600' : 'text-red-600'
+                }`} />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Report Incident</h3>
-              <p className="text-gray-600 text-sm mb-4">Submit a new incident report securely</p>
-              <div className="flex items-center text-purple-600 font-medium">
-                Start Report <ArrowRightIcon className="h-4 w-4 ml-1" />
-              </div>
+              {canSubmitReport() ? (
+                <>
+                  <p className="text-gray-600 text-sm mb-4">Submit a new incident report securely</p>
+                  <div className="flex items-center text-purple-600 font-medium">
+                    Start Report <ArrowRightIcon className="h-4 w-4 ml-1" />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-red-600 text-sm mb-2 font-semibold">
+                    Report limit reached!
+                  </p>
+                  <p className="text-gray-600 text-xs mb-4">
+                    You've used all {subscription?.planDetails?.features?.maxReportsPerMonth || 3} free reports this month
+                  </p>
+                  <div className="flex items-center text-red-600 font-medium">
+                    Upgrade to Continue <ArrowRightIcon className="h-4 w-4 ml-1" />
+                  </div>
+                </>
+              )}
             </motion.div>
 
             {/* My Reports Card */}
@@ -440,7 +496,7 @@ export default function Dashboard() {
                   <button
                     onClick={() => {
                       setActiveSection(null)
-                      setIsReporting(true)
+                      handleReportClick()
                     }}
                     className="btn-primary inline-flex items-center"
                   >
