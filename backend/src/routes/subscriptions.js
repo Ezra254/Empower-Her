@@ -13,6 +13,7 @@ const router = express.Router()
 // @access  Public
 router.get('/plans', async (req, res) => {
   try {
+    await Plan.ensureDefaultPlans()
     const plans = await Plan.find({ isActive: true }).sort({ price: 1 })
     
     res.json({
