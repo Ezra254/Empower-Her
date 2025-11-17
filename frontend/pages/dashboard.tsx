@@ -193,7 +193,12 @@ export default function Dashboard() {
             plan: 'free', 
             status: 'active', 
             usage: { reportsThisMonth: 0, lastResetDate: new Date().toISOString() },
-            planDetails: { features: { maxReportsPerMonth: 3 } }
+            planDetails: { 
+              name: 'free',
+              displayName: 'Free Plan',
+              price: 0,
+              features: { maxReportsPerMonth: 3 }
+            }
           })
         }
       } catch (error) {
