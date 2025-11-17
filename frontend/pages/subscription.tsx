@@ -13,6 +13,49 @@ import {
   ArrowLeftIcon
 } from '@heroicons/react/24/outline'
 
+const DEFAULT_PLANS: Plan[] = [
+  {
+    id: 'free-default',
+    name: 'free',
+    displayName: 'Free Plan',
+    price: 0,
+    currency: 'KES',
+    interval: 'month',
+    description: 'Perfect for getting started with up to 3 reports per month.',
+    features: {
+      maxReportsPerMonth: 3,
+      unlimitedReports: false,
+      prioritySupport: false,
+      detailedTracking: false,
+      downloadReports: false,
+      smsNotifications: false,
+      emailNotifications: true,
+      advancedAnalytics: false,
+      caseNotesAccess: true
+    }
+  },
+  {
+    id: 'premium-default',
+    name: 'premium',
+    displayName: 'Premium Plan',
+    price: 9.99,
+    currency: 'KES',
+    interval: 'month',
+    description: 'Unlimited reports, priority support, and advanced tracking tools.',
+    features: {
+      maxReportsPerMonth: 999,
+      unlimitedReports: true,
+      prioritySupport: true,
+      detailedTracking: true,
+      downloadReports: true,
+      smsNotifications: true,
+      emailNotifications: true,
+      advancedAnalytics: true,
+      caseNotesAccess: true
+    }
+  }
+]
+
 interface Plan {
   id: string
   name: string
@@ -97,16 +140,19 @@ export default function SubscriptionPage() {
             
             if (loadedPlans.length === 0) {
               console.warn('No plans returned from API')
-              toast.error('No subscription plans available. Please contact support.')
+              toast.error('No subscription plans available. Showing defaults.')
+              setPlans(DEFAULT_PLANS)
             }
           } else {
             const errorData = await plansRes.json().catch(() => ({}))
             console.error('Failed to load plans:', plansRes.status, plansRes.statusText, errorData)
             toast.error(`Failed to load subscription plans (${plansRes.status}). Please refresh the page.`)
+            setPlans(DEFAULT_PLANS)
           }
         } catch (error) {
           console.error('Error fetching plans:', error)
           toast.error('Network error loading plans. Please check your connection.')
+          setPlans(DEFAULT_PLANS)
         }
 
         // Get subscription
