@@ -192,6 +192,8 @@ export default function Dashboard() {
           setSubscription({ 
             plan: 'free', 
             status: 'active', 
+            cancelAtPeriodEnd: false,
+            currentPeriodEnd: undefined,
             usage: { reportsThisMonth: 0, lastResetDate: new Date().toISOString() },
             planDetails: { 
               name: 'free',
