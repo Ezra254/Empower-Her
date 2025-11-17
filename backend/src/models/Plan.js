@@ -8,6 +8,7 @@ const DEFAULT_PLANS = {
     currency: 'KES',
     interval: 'month',
     description: 'Start reporting incidents with up to 3 reports per month.',
+    isActive: true,
     features: {
       maxReportsPerMonth: 3,
       unlimitedReports: false,
@@ -27,6 +28,7 @@ const DEFAULT_PLANS = {
     currency: 'KES',
     interval: 'month',
     description: 'Unlimited reports, priority support, and advanced tracking.',
+    isActive: true,
     features: {
       maxReportsPerMonth: 999,
       unlimitedReports: true,
@@ -122,7 +124,7 @@ planSchema.statics.ensureDefaultPlans = async function() {
     Object.values(DEFAULT_PLANS).map(async (defaultPlan) => {
       await this.updateOne(
         { name: defaultPlan.name },
-        { $setOnInsert: defaultPlan },
+        { $set: defaultPlan },
         { upsert: true }
       )
     })
