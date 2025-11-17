@@ -123,12 +123,38 @@ export default function SubscriptionPage() {
             console.error('Failed to load subscription:', subRes.status, subRes.statusText, errorData)
             // Don't show error toast here - subscription might not exist yet for new users
             // Default to free plan if subscription doesn't load
-            setSubscription({ plan: 'free', status: 'active', usage: { reportsThisMonth: 0, lastResetDate: new Date().toISOString() } })
+            setSubscription({ 
+              plan: 'free', 
+              status: 'active', 
+              cancelAtPeriodEnd: false,
+              currentPeriodStart: new Date().toISOString(),
+              currentPeriodEnd: undefined,
+              usage: { reportsThisMonth: 0, lastResetDate: new Date().toISOString() },
+              planDetails: {
+                name: 'free',
+                displayName: 'Free Plan',
+                price: 0,
+                features: { maxReportsPerMonth: 3 }
+              }
+            })
           }
         } catch (error) {
           console.error('Error fetching subscription:', error)
           // Default to free plan on error
-          setSubscription({ plan: 'free', status: 'active', usage: { reportsThisMonth: 0, lastResetDate: new Date().toISOString() } })
+          setSubscription({ 
+            plan: 'free', 
+            status: 'active', 
+            cancelAtPeriodEnd: false,
+            currentPeriodStart: new Date().toISOString(),
+            currentPeriodEnd: undefined,
+            usage: { reportsThisMonth: 0, lastResetDate: new Date().toISOString() },
+            planDetails: {
+              name: 'free',
+              displayName: 'Free Plan',
+              price: 0,
+              features: { maxReportsPerMonth: 3 }
+            }
+          })
         }
       } catch (error) {
         console.error('Error loading subscription page:', error)
