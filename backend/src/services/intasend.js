@@ -16,11 +16,16 @@ class IntaSendService {
 
   /**
    * Generate authentication headers for IntaSend API
+   * 
+   * Note: If Basic auth doesn't work, try:
+   * - Bearer token: `Authorization: Bearer ${token}`
+   * - API keys in headers: `X-API-Key` and `X-API-Secret`
+   * - Check IntaSend documentation: https://developers.intasend.com/docs
    */
   getAuthHeaders() {
     const token = Buffer.from(`${this.publicKey}:${this.secretKey}`).toString('base64')
     return {
-      'Authorization': `Bearer ${token}`,
+      'Authorization': `Basic ${token}`,
       'Content-Type': 'application/json',
       'Accept': 'application/json'
     }
@@ -45,6 +50,15 @@ class IntaSendService {
         metadata = {}
       } = paymentData
 
+      // Validate required fields
+      if (!this.publicKey || !this.secretKey) {
+        throw new Error('IntaSend API keys are not configured')
+      }
+
+      if (!phoneNumber) {
+        throw new Error('Phone number is required for M-Pesa payments')
+      }
+
       // IntaSend payment initiation endpoint
       const paymentUrl = `${this.apiUrl}/api/v1/payment/mpesa-stk-push/`
 
@@ -62,16 +76,49 @@ class IntaSendService {
         metadata: metadata
       }
 
+      console.log('Initiating M-Pesa payment:', {
+        url: paymentUrl,
+        amount,
+        currency,
+        phoneNumber: phoneNumber.substring(0, 3) + '***' // Log partial phone for privacy
+      })
+
       const response = await fetch(paymentUrl, {
         method: 'POST',
         headers: this.getAuthHeaders(),
         body: JSON.stringify(requestBody)
       })
 
-      const data = await response.json()
+      // Read response text first (can only read once)
+      const responseText = await response.text()
+      const contentType = response.headers.get('content-type') || ''
+      let data
+      
+      if (contentType.includes('application/json')) {
+        try {
+          data = JSON.parse(responseText)
+        } catch (parseError) {
+          console.error('Failed to parse JSON response:', responseText.substring(0, 500))
+          throw new Error(`Invalid JSON response from payment gateway. Status: ${response.status}`)
+        }
+      } else {
+        // Response is not JSON (likely HTML error page)
+        console.error('IntaSend API returned non-JSON response:', {
+          status: response.status,
+          statusText: response.statusText,
+          contentType: contentType,
+          body: responseText.substring(0, 500)
+        })
+        throw new Error(`Payment gateway returned an error. Status: ${response.status} ${response.statusText}`)
+      }
 
       if (!response.ok) {
-        throw new Error(data.message || data.error || 'Payment initiation failed')
+        console.error('IntaSend payment initiation failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: data
+        })
+        throw new Error(data.message || data.error || data.detail || `Payment initiation failed (${response.status})`)
       }
 
       return {
@@ -214,6 +261,11 @@ class IntaSendService {
         metadata = {}
       } = paymentData
 
+      // Validate required fields
+      if (!this.publicKey || !this.secretKey) {
+        throw new Error('IntaSend API keys are not configured')
+      }
+
       const paymentUrl = `${this.apiUrl}/api/v1/payment/links/`
 
       const requestBody = {
@@ -229,16 +281,49 @@ class IntaSendService {
         metadata: metadata
       }
 
+      console.log('Creating payment link:', {
+        url: paymentUrl,
+        amount,
+        currency,
+        email: email.substring(0, 3) + '***' // Log partial email for privacy
+      })
+
       const response = await fetch(paymentUrl, {
         method: 'POST',
         headers: this.getAuthHeaders(),
         body: JSON.stringify(requestBody)
       })
 
-      const data = await response.json()
+      // Read response text first (can only read once)
+      const responseText = await response.text()
+      const contentType = response.headers.get('content-type') || ''
+      let data
+      
+      if (contentType.includes('application/json')) {
+        try {
+          data = JSON.parse(responseText)
+        } catch (parseError) {
+          console.error('Failed to parse JSON response:', responseText.substring(0, 500))
+          throw new Error(`Invalid JSON response from payment gateway. Status: ${response.status}`)
+        }
+      } else {
+        // Response is not JSON (likely HTML error page)
+        console.error('IntaSend API returned non-JSON response:', {
+          status: response.status,
+          statusText: response.statusText,
+          contentType: contentType,
+          body: responseText.substring(0, 500)
+        })
+        throw new Error(`Payment gateway returned an error. Status: ${response.status} ${response.statusText}`)
+      }
 
       if (!response.ok) {
-        throw new Error(data.message || data.error || 'Payment link creation failed')
+        console.error('IntaSend payment link creation failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: data
+        })
+        throw new Error(data.message || data.error || data.detail || `Payment link creation failed (${response.status})`)
       }
 
       return {

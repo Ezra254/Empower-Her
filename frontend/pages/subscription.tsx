@@ -300,7 +300,30 @@ export default function SubscriptionPage() {
         })
       })
 
-      const data = await response.json()
+      // Read response text first (can only read once)
+      const responseText = await response.text()
+      const contentType = response.headers.get('content-type') || ''
+      let data
+      
+      if (contentType.includes('application/json')) {
+        try {
+          data = JSON.parse(responseText)
+        } catch (parseError) {
+          console.error('Failed to parse JSON response:', responseText.substring(0, 500))
+          toast.error(`Server returned invalid response. Status: ${response.status}. Please check your backend configuration.`)
+          return
+        }
+      } else {
+        // Response is not JSON (likely HTML error page)
+        console.error('Backend returned non-JSON response:', {
+          status: response.status,
+          statusText: response.statusText,
+          contentType: contentType,
+          body: responseText.substring(0, 500)
+        })
+        toast.error(`Server error: ${response.status} ${response.statusText}. Please check your backend configuration.`)
+        return
+      }
 
       if (response.ok) {
         toast.success(data.message || 'Payment initiated successfully!')
