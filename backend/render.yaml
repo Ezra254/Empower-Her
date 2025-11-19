@@ -17,16 +17,12 @@ services:
         sync: false
       - key: BACKEND_URL
         sync: false
-      - key: INTASEND_PUBLIC_KEY
+      - key: PAYSTACK_PUBLIC_KEY
         sync: false
-      - key: INTASEND_SECRET_KEY
+      - key: PAYSTACK_SECRET_KEY
         sync: false
-      - key: INTASEND_WEBHOOK_SECRET
-        sync: false
-      - key: INTASEND_API_URL
-        value: https://api.intasend.com
-      - key: INTASEND_TEST_MODE
-        value: "false"
+      - key: PAYSTACK_API_URL
+        value: https://api.paystack.co
       - key: EMAIL_HOST
         value: smtp.gmail.com
       - key: EMAIL_PORT

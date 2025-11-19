@@ -5,7 +5,7 @@ const Plan = require('../models/Plan')
 const Subscription = require('../models/Subscription')
 const { protect } = require('../middleware/auth')
 const { getSubscriptionInfo } = require('../middleware/subscription')
-const intaSendService = require('../services/intasend')
+const paystackService = require('../services/paystack')
 const router = express.Router()
 
 // @route   GET /api/subscriptions/plans
@@ -83,7 +83,7 @@ router.get('/my-subscription', protect, getSubscriptionInfo, async (req, res) =>
 })
 
 // @route   POST /api/subscriptions/initiate-payment
-// @desc    Initiate payment for subscription via IntaSend
+// @desc    Initiate payment for subscription via Paystack
 // @access  Private
 router.post('/initiate-payment', protect, [
   body('plan').isIn(['free', 'premium']).withMessage('Invalid plan selected'),
@@ -117,8 +117,8 @@ router.post('/initiate-payment', protect, [
       return res.status(400).json({ message: 'Plan not found' })
     }
 
-    // Check if IntaSend is configured
-    if (!intaSendService.publicKey || !intaSendService.secretKey) {
+    // Check if Paystack is configured
+    if (!paystackService.publicKey || !paystackService.secretKey) {
       return res.status(500).json({ 
         message: 'Payment gateway not configured. Please contact support.' 
       })
@@ -145,34 +145,17 @@ router.post('/initiate-payment', protect, [
       subscriptionType: 'premium'
     }
 
-    let paymentResult
-
-    if (paymentMethod === 'mpesa') {
-      // Initiate M-Pesa STK Push
-      paymentResult = await intaSendService.initiatePayment({
-        amount: amount,
-        currency: currency,
-        phoneNumber: userPhone,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        narrative: `Premium Subscription - ${planDetails.displayName}`,
-        callbackUrl: callbackUrl,
-        metadata: metadata
-      })
-    } else {
-      // Create payment link for card payments
-      paymentResult = await intaSendService.createPaymentLink({
-        amount: amount,
-        currency: currency,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        narrative: `Premium Subscription - ${planDetails.displayName}`,
-        callbackUrl: callbackUrl,
-        metadata: metadata
-      })
-    }
+    const paymentResult = await paystackService.initiatePayment({
+      amount: amount,
+      currency: currency,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      paymentMethod,
+      phoneNumber: userPhone,
+      callbackUrl: callbackUrl,
+      metadata
+    })
 
     if (!paymentResult.success) {
       return res.status(400).json({
@@ -217,11 +200,13 @@ router.post('/initiate-payment', protect, [
         apiRef: paymentResult.apiRef,
         status: paymentResult.status,
         paymentMethod: paymentMethod,
-        ...(paymentMethod === 'card' && { paymentLink: paymentResult.paymentLink })
+        ...(paymentResult.paymentLink ? { paymentLink: paymentResult.paymentLink } : {})
       },
       instructions: paymentMethod === 'mpesa' 
         ? 'Please check your phone for an M-Pesa prompt to complete the payment.'
-        : 'Please complete the payment using the provided payment link.'
+        : paymentResult.paymentLink 
+          ? 'Please complete the payment using the provided Paystack checkout link.'
+          : 'Complete the payment in the Paystack window.'
     })
 
   } catch (error) {
@@ -234,27 +219,26 @@ router.post('/initiate-payment', protect, [
 })
 
 // @route   POST /api/subscriptions/webhook
-// @desc    Webhook handler for IntaSend payment callbacks
-// @access  Public (IntaSend calls this)
-router.post('/webhook', express.json(), async (req, res) => {
+// @desc    Webhook handler for Paystack payment callbacks
+// @access  Public (Paystack calls this)
+router.post('/webhook', async (req, res) => {
   try {
-    // Get webhook signature from headers
-    const signature = req.headers['x-intasend-signature'] || req.headers['signature'] || req.headers['x-signature']
-    const webhookData = req.body
+    const signature = req.headers['x-paystack-signature']
+    const rawBody = req.rawBody || Buffer.from(JSON.stringify(req.body || {}))
 
-    console.log('IntaSend webhook received:', webhookData)
-
-    // Process webhook
-    const processedWebhook = intaSendService.processWebhook(webhookData, signature)
-
-    if (!processedWebhook.valid) {
-      console.error('Invalid webhook:', processedWebhook.error)
+    if (!paystackService.verifySignature(rawBody, signature)) {
+      console.error('Invalid Paystack webhook signature')
       return res.status(400).json({ error: 'Invalid webhook signature' })
     }
 
-    // Extract metadata - IntaSend sends metadata in the webhook payload
-    // Check both webhookData and processedWebhook for metadata
-    const metadata = processedWebhook.metadata || webhookData.metadata || webhookData.invoice?.metadata || {}
+    const processedWebhook = paystackService.parseWebhookEvent(rawBody)
+
+    if (!processedWebhook.valid) {
+      console.error('Failed to parse Paystack webhook:', processedWebhook.error)
+      return res.status(400).json({ error: 'Invalid webhook payload' })
+    }
+
+    const metadata = processedWebhook.metadata || {}
     const userId = metadata.userId || metadata.user_id
     const plan = metadata.plan || 'premium'
 
@@ -271,7 +255,7 @@ router.post('/webhook', express.json(), async (req, res) => {
     }
 
     // Find subscription by payment ID - check both metadata map and stripeSubscriptionId field
-    const paymentId = processedWebhook.paymentId || webhookData.invoice_id || webhookData.id
+    const paymentId = processedWebhook.paymentId
     const subscription = await Subscription.findOne({ 
       $or: [
         { userId: user._id, stripeSubscriptionId: paymentId },
@@ -313,9 +297,9 @@ router.post('/webhook', express.json(), async (req, res) => {
           stripeSubscriptionId: paymentId,
           metadata: new Map(Object.entries({
             paymentId: paymentId,
-            apiRef: processedWebhook.apiRef || webhookData.api_ref || '',
-            amount: processedWebhook.amount?.toString() || webhookData.amount?.toString() || '',
-            currency: processedWebhook.currency || webhookData.currency || 'KES',
+            apiRef: processedWebhook.data?.access_code || '',
+            amount: processedWebhook.amount?.toString() || '',
+            currency: processedWebhook.currency || 'KES',
             paidAt: new Date().toISOString()
           }))
         })
@@ -332,7 +316,7 @@ router.post('/webhook', express.json(), async (req, res) => {
       console.log('Payment not successful for user:', userId, 'Status:', processedWebhook.status)
     }
 
-    // Return success to IntaSend
+    // Return success to Paystack
     res.json({ received: true, status: 'processed' })
 
   } catch (error) {
