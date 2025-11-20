@@ -33,6 +33,23 @@ const toMinorUnits = amount => {
   return Math.round(numericAmount * 100)
 }
 
+const normalizePhoneNumber = phone => {
+  if (!phone) return null
+  const trimmed = phone.toString().trim()
+  if (trimmed.startsWith('+')) {
+    return trimmed
+  }
+  const digits = trimmed.replace(/[^\d]/g, '')
+  if (!digits) return null
+  if (digits.startsWith('0')) {
+    return `+254${digits.slice(1)}`
+  }
+  if (digits.startsWith('254')) {
+    return `+${digits}`
+  }
+  return `+${digits}`
+}
+
 async function createPaymentSession({
   amount,
   currency = 'KES',
@@ -100,6 +117,58 @@ async function verifyTransaction(reference) {
   }
 }
 
+async function initiateMpesaPayment({
+  amount,
+  currency = 'KES',
+  email,
+  phoneNumber,
+  metadata = {}
+}) {
+  const configError = ensureConfigured()
+  if (configError) return configError
+
+  const normalizedPhone = normalizePhoneNumber(phoneNumber)
+  if (!normalizedPhone) {
+    return {
+      success: false,
+      error: 'Valid phone number is required for M-Pesa payments'
+    }
+  }
+
+  try {
+    const payload = {
+      amount: toMinorUnits(amount),
+      email,
+      currency,
+      mobile_money: {
+        phone: normalizedPhone,
+        provider: 'mpesa'
+      },
+      metadata: {
+        ...metadata,
+        paymentChannel: 'mpesa'
+      }
+    }
+
+    const response = await client.post('/charge', payload)
+    const data = response.data?.data || {}
+
+    return {
+      success: true,
+      paymentId: data.reference,
+      apiRef: data.reference,
+      status: data.status || 'pending',
+      requiresAction: data.status === 'pending'
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error.response?.data?.message || error.message,
+      details: error.response?.data || null
+    }
+  }
+}
+
 function processWebhook(payload, signature) {
   if (!PAYSTACK_WEBHOOK_SECRET) {
     return {
@@ -149,6 +218,7 @@ module.exports = {
   publicKey: PAYSTACK_PUBLIC_KEY,
   secretKey: PAYSTACK_SECRET_KEY,
   createPaymentSession,
+  initiateMpesaPayment,
   verifyTransaction,
   processWebhook
 }

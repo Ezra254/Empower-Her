@@ -87,7 +87,8 @@ router.get('/my-subscription', protect, getSubscriptionInfo, async (req, res) =>
 // @access  Private
 router.post('/initiate-payment', protect, [
   body('plan').isIn(['free', 'premium']).withMessage('Invalid plan selected'),
-  body('paymentMethod').isIn(['card']).withMessage('Invalid payment method')
+  body('paymentMethod').isIn(['card', 'mpesa']).withMessage('Invalid payment method'),
+  body('phoneNumber').optional().isMobilePhone().withMessage('Invalid phone number')
 ], async (req, res) => {
   try {
     const errors = validationResult(req)
@@ -98,7 +99,7 @@ router.post('/initiate-payment', protect, [
       })
     }
 
-    const { plan, paymentMethod } = req.body
+    const { plan, paymentMethod, phoneNumber } = req.body
     const user = await User.findById(req.user._id)
     
     if (!user) {
@@ -128,24 +129,45 @@ router.post('/initiate-payment', protect, [
     const currency = planDetails.currency || 'KES'
     const callbackUrl = process.env.PAYSTACK_REDIRECT_URL || `${process.env.FRONTEND_URL || 'http://localhost:3000'}/subscription`
 
+    // Determine phone number for M-Pesa
+    const userPhone = phoneNumber || user.profile?.phone
+    if (paymentMethod === 'mpesa' && !userPhone) {
+      return res.status(400).json({
+        message: 'Phone number is required for M-Pesa payments'
+      })
+    }
+
     // Create payment metadata
     const metadata = {
       userId: user._id.toString(),
       userEmail: user.email,
       plan: plan,
       subscriptionType: 'premium',
-      gateway: 'paystack'
+      gateway: 'paystack',
+      paymentMethod
     }
 
-    const paymentResult = await paystackService.createPaymentSession({
-      amount,
-      currency,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      callbackUrl,
-      metadata
-    })
+    let paymentResult
+
+    if (paymentMethod === 'mpesa') {
+      paymentResult = await paystackService.initiateMpesaPayment({
+        amount,
+        currency,
+        email: user.email,
+        phoneNumber: userPhone,
+        metadata
+      })
+    } else {
+      paymentResult = await paystackService.createPaymentSession({
+        amount,
+        currency,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        callbackUrl,
+        metadata
+      })
+    }
 
     if (!paymentResult.success) {
       return res.status(400).json({
@@ -192,9 +214,11 @@ router.post('/initiate-payment', protect, [
         paymentMethod: paymentMethod,
         ...(paymentResult.paymentLink ? { paymentLink: paymentResult.paymentLink } : {})
       },
-      instructions: paymentResult.paymentLink 
-        ? 'Please complete the payment using the secure Paystack checkout page.'
-        : 'Complete the payment in the Paystack window.'
+      instructions: paymentMethod === 'mpesa'
+        ? 'Please check your phone for the M-Pesa prompt and enter your PIN to complete payment.'
+        : paymentResult.paymentLink
+          ? 'Please complete the payment using the secure Paystack checkout page.'
+          : 'Complete the payment in the Paystack window.'
     })
 
   } catch (error) {

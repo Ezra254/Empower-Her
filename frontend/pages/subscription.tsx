@@ -104,6 +104,8 @@ export default function SubscriptionPage() {
   const [isSubscribing, setIsSubscribing] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
+  const [paymentMethod, setPaymentMethod] = useState<'mpesa' | 'card'>('mpesa')
+  const [phoneNumber, setPhoneNumber] = useState('')
   const [paymentLink, setPaymentLink] = useState<string | null>(null)
 
   useEffect(() => {
@@ -269,12 +271,19 @@ export default function SubscriptionPage() {
       // Premium plan - show payment modal
       console.log('Opening payment modal for premium plan')
       setSelectedPlan(planName)
+    setPaymentMethod('mpesa')
+    setPhoneNumber(user?.profile?.phone || '')
       setShowPaymentModal(true)
     }
   }
 
   const handleInitiatePayment = async () => {
     if (!selectedPlan || isSubscribing) return
+
+    if (paymentMethod === 'mpesa' && !phoneNumber) {
+      toast.error('Please enter your phone number for M-Pesa payment')
+      return
+    }
 
     setIsSubscribing(true)
     try {
@@ -287,7 +296,8 @@ export default function SubscriptionPage() {
         },
         body: JSON.stringify({
           plan: selectedPlan,
-          paymentMethod: 'card'
+          paymentMethod,
+          phoneNumber: paymentMethod === 'mpesa' ? phoneNumber : undefined
         })
       })
 
@@ -319,10 +329,14 @@ export default function SubscriptionPage() {
       if (response.ok) {
         toast.success(data.message || 'Payment initiated successfully!')
         
-        if (data.payment?.paymentLink) {
+        if (paymentMethod === 'card' && data.payment?.paymentLink) {
           setPaymentLink(data.payment.paymentLink)
           window.open(data.payment.paymentLink, '_blank')
           toast('Please complete the payment in the new window', { icon: 'ℹ️' })
+        }
+
+        if (paymentMethod === 'mpesa') {
+          toast.success(data.instructions || 'Please check your phone for the M-Pesa prompt.')
         }
 
         // Close modal after a short delay
@@ -330,32 +344,54 @@ export default function SubscriptionPage() {
           setShowPaymentModal(false)
           setSelectedPlan(null)
           setPaymentLink(null)
+          setPhoneNumber('')
+          setPaymentMethod('mpesa')
         }, 2000)
 
-        // Poll for subscription update while user completes payment
-        const pollSubscription = setInterval(async () => {
-          try {
-            const subRes = await fetch(`${API_URL}/subscriptions/my-subscription`, {
-              headers: authService.getAuthHeaders()
-            })
-            if (subRes.ok) {
-              const subData = await subRes.json()
-              if (subData.subscription?.plan === 'premium' && subData.subscription?.status === 'active') {
-                setSubscription(subData.subscription)
-                toast.success('Subscription activated! You now have unlimited reports.')
-                clearInterval(pollSubscription)
-                window.location.reload()
+        if (paymentMethod === 'card') {
+          // Poll for subscription update while user completes payment
+          const pollSubscription = setInterval(async () => {
+            try {
+              const subRes = await fetch(`${API_URL}/subscriptions/my-subscription`, {
+                headers: authService.getAuthHeaders()
+              })
+              if (subRes.ok) {
+                const subData = await subRes.json()
+                if (subData.subscription?.plan === 'premium' && subData.subscription?.status === 'active') {
+                  setSubscription(subData.subscription)
+                  toast.success('Subscription activated! You now have unlimited reports.')
+                  clearInterval(pollSubscription)
+                  window.location.reload()
+                }
               }
+            } catch (error) {
+              console.error('Error polling subscription:', error)
             }
-          } catch (error) {
-            console.error('Error polling subscription:', error)
-          }
-        }, 3000)
+          }, 3000)
 
-        // Stop polling after 5 minutes
-        setTimeout(() => {
-          clearInterval(pollSubscription)
-        }, 300000)
+          // Stop polling after 5 minutes
+          setTimeout(() => {
+            clearInterval(pollSubscription)
+          }, 300000)
+        } else {
+          setTimeout(async () => {
+            try {
+              const subRes = await fetch(`${API_URL}/subscriptions/my-subscription`, {
+                headers: authService.getAuthHeaders()
+              })
+              if (subRes.ok) {
+                const subData = await subRes.json()
+                setSubscription(subData.subscription)
+                if (subData.subscription?.plan === 'premium' && subData.subscription?.status === 'active') {
+                  toast.success('Subscription activated! You now have unlimited reports.')
+                  window.location.reload()
+                }
+              }
+            } catch (error) {
+              console.error('Error reloading subscription:', error)
+            }
+          }, 7000)
+        }
       } else {
         toast.error(data.message || 'Failed to initiate payment')
       }
@@ -779,6 +815,7 @@ export default function SubscriptionPage() {
                   onClick={() => {
                     setShowPaymentModal(false)
                     setSelectedPlan(null)
+                    setPhoneNumber('')
                   }}
                   className="text-gray-400 hover:text-gray-600"
                 >
@@ -791,12 +828,69 @@ export default function SubscriptionPage() {
                   You are subscribing to <strong>Premium Plan</strong> for ${premiumPlan?.price}/{premiumPlan?.interval}
                 </p>
 
-                <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-blue-800">
-                    Payments are processed securely via Paystack. Click "Pay Now" to open the checkout window in a new
-                    tab and complete your card payment.
-                  </p>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Payment Method
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setPaymentMethod('mpesa')}
+                      className={`p-3 rounded-lg border-2 transition-colors ${
+                        paymentMethod === 'mpesa'
+                          ? 'border-purple-500 bg-purple-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="text-sm font-medium">M-Pesa</div>
+                      <div className="text-xs text-gray-500">Mobile Money</div>
+                    </button>
+                    <button
+                      onClick={() => setPaymentMethod('card')}
+                      className={`p-3 rounded-lg border-2 transition-colors ${
+                        paymentMethod === 'card'
+                          ? 'border-purple-500 bg-purple-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="text-sm font-medium">Card</div>
+                      <div className="text-xs text-gray-500">Credit/Debit</div>
+                    </button>
+                  </div>
                 </div>
+
+                {paymentMethod === 'mpesa' && (
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Phone Number (M-Pesa)
+                    </label>
+                    <input
+                      type="tel"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      placeholder="254712345678"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Enter your M-Pesa registered phone number (with country code)
+                    </p>
+                  </div>
+                )}
+
+                {paymentMethod === 'card' ? (
+                  <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      Payments are processed securely via Paystack. Click "Pay Now" to open the checkout window in a new tab
+                      and complete your card payment.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mb-4 p-3 bg-green-50 rounded-lg">
+                    <p className="text-sm text-green-800">
+                      After clicking "Pay Now", you will receive an M-Pesa prompt on your phone to enter your PIN and
+                      complete the payment securely.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-3">
@@ -804,6 +898,7 @@ export default function SubscriptionPage() {
                   onClick={() => {
                     setShowPaymentModal(false)
                     setSelectedPlan(null)
+                    setPhoneNumber('')
                   }}
                   className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                   disabled={isSubscribing}
@@ -812,7 +907,7 @@ export default function SubscriptionPage() {
                 </button>
                 <button
                   onClick={handleInitiatePayment}
-                  disabled={isSubscribing}
+                  disabled={isSubscribing || (paymentMethod === 'mpesa' && !phoneNumber)}
                   className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
                 >
                   {isSubscribing ? 'Processing...' : `Pay $${premiumPlan?.price}`}
