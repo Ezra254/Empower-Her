@@ -378,8 +378,8 @@ const Home: NextPage = () => {
                         <PhoneIcon className="h-5 w-5 text-purple-600 mr-3 mt-1" />
                         <div>
                           <p className="font-medium text-gray-900">Phone</p>
-                          <a href="tel:+15551234567" className="text-purple-600 hover:text-purple-700">
-                            +1 (555) 123-4567
+                          <a href="tel:+254719638006" className="text-purple-600 hover:text-purple-700">
+                            +254 719 638 006
                           </a>
                         </div>
                       </div>
@@ -398,12 +398,12 @@ const Home: NextPage = () => {
                     <div className="space-y-3">
                       <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
                         <p className="font-semibold text-red-900 mb-1">Emergency Services</p>
-                        <a href="tel:911" className="text-red-600 font-medium text-lg">911</a>
+                        <a href="tel:1195" className="text-red-600 font-medium text-lg">1195</a>
                         <p className="text-sm text-red-700 mt-1">Call immediately in case of emergency</p>
                       </div>
                       <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
                         <p className="font-semibold text-purple-900 mb-1">GBV Helpline</p>
-                        <a href="tel:0800000999" className="text-purple-600 font-medium">0800-000-999</a>
+                        <a href="tel:0800720565" className="text-purple-600 font-medium">0800-720-565</a>
                         <p className="text-sm text-purple-700 mt-1">24/7 confidential support</p>
                       </div>
                     </div>
