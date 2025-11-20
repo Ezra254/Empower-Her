@@ -779,7 +779,6 @@ export default function SubscriptionPage() {
                   onClick={() => {
                     setShowPaymentModal(false)
                     setSelectedPlan(null)
-                    setPhoneNumber('')
                   }}
                   className="text-gray-400 hover:text-gray-600"
                 >
