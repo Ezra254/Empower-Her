@@ -377,7 +377,7 @@ const Home: NextPage = () => {
                       <div className="flex items-start">
                         <PhoneIcon className="h-5 w-5 text-purple-600 mr-3 mt-1" />
                         <div>
-                          <p className="font-medium text-gray-900">Phone</p>
+                          <p className="font-medium text-gray-900">Phone (GVRC)</p>
                           <a href="tel:+254719638006" className="text-purple-600 hover:text-purple-700">
                             +254 719 638 006
                           </a>
@@ -403,7 +403,7 @@ const Home: NextPage = () => {
                       </div>
                       <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
                         <p className="font-semibold text-purple-900 mb-1">GBV Helpline</p>
-                        <a href="tel:0800720565" className="text-purple-600 font-medium">0800-720-565</a>
+                        <a href="tel:0800720565" className="text-purple-600 font-medium">0800 720 565</a>
                         <p className="text-sm text-purple-700 mt-1">24/7 confidential support</p>
                       </div>
                     </div>
@@ -447,8 +447,8 @@ const Home: NextPage = () => {
                 <h3 className="font-semibold mb-4">Contact</h3>
                 <ul className="space-y-2 text-gray-400">
                   <li>support@empowerher.org</li>
-                  <li>+1 (555) 123-4567</li>
-                  <li>24/7 Emergency: 911</li>
+                  <li>+254 719 638 006 (GVRC Hotline)</li>
+                  <li>24/7 Emergency: 1195</li>
                 </ul>
               </div>
             </div>

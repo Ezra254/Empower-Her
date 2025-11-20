@@ -91,13 +91,13 @@ const encouragementMessages = [
 const helplines = [
   {
     name: "National GBV Helpline",
-    phone: "0800-000-999",
+    phone: "0800 720 565",
     available: "24/7",
     description: "Free, confidential support for gender-based violence"
   },
   {
     name: "Emergency Services",
-    phone: "911",
+    phone: "1195",
     available: "24/7",
     description: "For immediate danger or emergencies"
   },
@@ -674,7 +674,7 @@ export default function Dashboard() {
                   <div>
                     <p className="font-semibold text-red-900 mb-1">Emergency?</p>
                     <p className="text-sm text-red-800">
-                      If you're in immediate danger, call <strong>911</strong> or your local emergency number right away.
+                      If you're in immediate danger, call <strong>1195</strong> or your local emergency number right away.
                     </p>
                   </div>
                 </div>

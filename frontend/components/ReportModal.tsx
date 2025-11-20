@@ -74,7 +74,7 @@ const urgencyLevels = [
   { value: 'low', label: 'Low - No immediate danger' },
   { value: 'medium', label: 'Medium - Some concern' },
   { value: 'high', label: 'High - Immediate attention needed' },
-  { value: 'emergency', label: 'Emergency - Call 911 immediately' }
+  { value: 'emergency', label: 'Emergency - Call 1195 immediately' }
 ]
 
 export default function ReportModal({ isOpen, onClose }: ReportModalProps) {
@@ -751,7 +751,7 @@ export default function ReportModal({ isOpen, onClose }: ReportModalProps) {
 
                 <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
                   <p className="text-sm text-yellow-800">
-                    <strong>Emergency:</strong> If you are in immediate danger, please call 911 or your local emergency number right away.
+                    <strong>Emergency:</strong> If you are in immediate danger, please call 1195 or your local emergency number right away.
                   </p>
                 </div>
               </motion.div>
