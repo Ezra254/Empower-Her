@@ -26,7 +26,7 @@ services:
       - key: PAYSTACK_API_URL
         value: https://api.paystack.co
       - key: PAYSTACK_REDIRECT_URL
-        value: https://your-frontend-domain.com/subscription
+        value: https://empowerher-frontend.vercel.app/payment-success
       - key: EMAIL_HOST
         value: smtp.gmail.com
       - key: EMAIL_PORT

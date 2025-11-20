@@ -315,7 +315,7 @@ empowerher/
    PAYSTACK_SECRET_KEY=sk_test_your-secret-key
    PAYSTACK_WEBHOOK_SECRET=your-paystack-webhook-secret
    PAYSTACK_API_URL=https://api.paystack.co
-   PAYSTACK_REDIRECT_URL=http://localhost:3000/subscription
+   PAYSTACK_REDIRECT_URL=https://empowerher-frontend.vercel.app/payment-success
    ```
 
 #### Frontend Configuration

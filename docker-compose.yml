@@ -35,7 +35,7 @@ services:
       PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY}
       PAYSTACK_WEBHOOK_SECRET: ${PAYSTACK_WEBHOOK_SECRET:-}
       PAYSTACK_API_URL: ${PAYSTACK_API_URL:-https://api.paystack.co}
-      PAYSTACK_REDIRECT_URL: ${PAYSTACK_REDIRECT_URL:-http://localhost:3000/subscription}
+      PAYSTACK_REDIRECT_URL: ${PAYSTACK_REDIRECT_URL:-https://empowerher-frontend.vercel.app/payment-success}
       EMAIL_HOST: ${EMAIL_HOST:-smtp.gmail.com}
       EMAIL_PORT: ${EMAIL_PORT:-587}
       EMAIL_USER: ${EMAIL_USER}

@@ -25,10 +25,10 @@ PAYSTACK_PUBLIC_KEY=pk_test_xxx
 PAYSTACK_SECRET_KEY=sk_test_xxx
 PAYSTACK_WEBHOOK_SECRET=your_webhook_secret
 PAYSTACK_API_URL=https://api.paystack.co
-PAYSTACK_REDIRECT_URL=http://localhost:3000/subscription
+PAYSTACK_REDIRECT_URL=https://empowerher-frontend.vercel.app/payment-success
 ```
 
-- `PAYSTACK_REDIRECT_URL` is the page Paystack redirects users to after payment. In production, set this to your live subscription page.
+- `PAYSTACK_REDIRECT_URL` is the page Paystack redirects users to after card checkout. EmpowerHer uses `https://empowerher-frontend.vercel.app/payment-success`.
 - Restart the backend after changing environment variables.
 
 ---
