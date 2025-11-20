@@ -24,7 +24,7 @@ const DEFAULT_PLANS = {
   premium: {
     name: 'premium',
     displayName: 'Premium Plan',
-    price: 490,
+    price: 500,
     currency: 'KES',
     interval: 'month',
     description: 'Unlimited reports, priority support, and advanced tracking.',
