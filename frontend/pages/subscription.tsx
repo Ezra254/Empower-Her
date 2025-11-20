@@ -38,7 +38,7 @@ const DEFAULT_PLANS: Plan[] = [
     id: 'premium-default',
     name: 'premium',
     displayName: 'Premium Plan',
-    price: 9.99,
+    price: 500,
     currency: 'KES',
     interval: 'month',
     description: 'Unlimited reports, priority support, and advanced tracking tools.',
@@ -573,7 +573,7 @@ export default function SubscriptionPage() {
                 <div className="text-center mb-6">
                   <h3 className="text-2xl font-bold text-gray-900 mb-2">{freePlan.displayName}</h3>
                   <div className="text-4xl font-bold text-gray-900 mb-2">
-                    ${freePlan.price}
+                    KES {freePlan.price}
                     <span className="text-lg text-gray-600">/{freePlan.interval}</span>
                   </div>
                   <p className="text-gray-600">{freePlan.description}</p>
@@ -664,7 +664,7 @@ export default function SubscriptionPage() {
                     <h3 className="text-2xl font-bold">{premiumPlan.displayName}</h3>
                   </div>
                   <div className="text-4xl font-bold mb-2">
-                    ${premiumPlan.price}
+                    KES {premiumPlan.price}
                     <span className="text-lg opacity-90">/{premiumPlan.interval}</span>
                   </div>
                   <p className="opacity-90">{premiumPlan.description}</p>
@@ -716,7 +716,11 @@ export default function SubscriptionPage() {
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       : 'bg-white text-purple-600 hover:bg-purple-50 hover:shadow-2xl transform hover:-translate-y-1 hover:scale-105 active:scale-95'
                   }`}
-                  aria-label={currentPlan === 'premium' ? 'Current Premium Plan' : `Upgrade to Premium for ${premiumPlan?.price}/${premiumPlan?.interval}`}
+                  aria-label={
+                    currentPlan === 'premium'
+                      ? 'Current Premium Plan'
+                      : `Upgrade to Premium for KES ${premiumPlan?.price}/${premiumPlan?.interval}`
+                  }
                 >
                   {currentPlan === 'premium' ? (
                     '✓ Current Plan'
@@ -726,7 +730,7 @@ export default function SubscriptionPage() {
                     'Loading...'
                   ) : (
                     <>
-                      Upgrade to Premium - ${premiumPlan.price}/{premiumPlan.interval}
+                      Upgrade to Premium - KES {premiumPlan.price}/{premiumPlan.interval}
                       <ArrowRightIcon className="h-5 w-5 inline-block ml-2" />
                     </>
                   )}
@@ -825,7 +829,7 @@ export default function SubscriptionPage() {
 
               <div className="mb-4">
                 <p className="text-gray-600 mb-4">
-                  You are subscribing to <strong>Premium Plan</strong> for ${premiumPlan?.price}/{premiumPlan?.interval}
+                  You are subscribing to <strong>Premium Plan</strong> for KES {premiumPlan?.price}/{premiumPlan?.interval}
                 </p>
 
                 <div className="mb-4">
@@ -910,7 +914,7 @@ export default function SubscriptionPage() {
                   disabled={isSubscribing || (paymentMethod === 'mpesa' && !phoneNumber)}
                   className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
                 >
-                  {isSubscribing ? 'Processing...' : `Pay $${premiumPlan?.price}`}
+                  {isSubscribing ? 'Processing...' : `Pay KES ${premiumPlan?.price}`}
                 </button>
               </div>
             </motion.div>
