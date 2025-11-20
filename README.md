@@ -58,7 +58,7 @@ To create a world where every victim of gender-based violence has access to just
 
 - **💳 Subscription System**
   - Free and Premium plans
-  - M-Pesa and Card payment integration (Paystack)
+  - Card payment integration (Paystack)
   - Subscription management
   - Usage tracking and limits
 
@@ -106,7 +106,7 @@ To create a world where every victim of gender-based violence has access to just
 - **Security**: Helmet, CORS, Rate Limiting, Bcrypt
 - **Validation**: Express Validator
 - **File Upload**: Multer
-- **Payment Gateway**: Paystack (M-Pesa & Card payments)
+- **Payment Gateway**: Paystack (Card payments)
 - **Logging**: Morgan
 - **Compression**: Compression middleware
 
@@ -139,7 +139,7 @@ To create a world where every victim of gender-based violence has access to just
 **Ezra (Backend Lead)**
 - Designed and implemented RESTful API architecture
 - Developed authentication and authorization system (JWT)
-- Integrated Paystack payment gateway (M-Pesa & Card payments)
+- Integrated Paystack payment gateway for subscriptions
 - Created database schemas and models (User, Report, Case, Subscription, Plan)
 - Implemented webhook handlers for payment processing
 - Set up security middleware (Helmet, CORS, Rate Limiting)
@@ -247,7 +247,7 @@ empowerher/
 ├── docs/                     # Documentation
 │   ├── DEPLOYMENT.md        # Deployment guide
 │   ├── SETUP.md             # Setup instructions
-│   ├── INTASEND_INTEGRATION_GUIDE.md  # Payment integration
+│   ├── PAYSTACK_INTEGRATION_GUIDE.md  # Payment integration
 │   └── ...
 │
 └── README.md                # This file
@@ -311,9 +311,11 @@ empowerher/
    BACKEND_URL=http://localhost:5000
 
    # Paystack Payment Gateway
-   PAYSTACK_PUBLIC_KEY=pk_test_your-paystack-public-key
-   PAYSTACK_SECRET_KEY=sk_test_your-paystack-secret-key
+   PAYSTACK_PUBLIC_KEY=pk_test_your-public-key
+   PAYSTACK_SECRET_KEY=sk_test_your-secret-key
+   PAYSTACK_WEBHOOK_SECRET=your-paystack-webhook-secret
    PAYSTACK_API_URL=https://api.paystack.co
+   PAYSTACK_REDIRECT_URL=http://localhost:3000/subscription
    ```
 
 #### Frontend Configuration
@@ -467,8 +469,8 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions.
 
 EmpowerHer uses **Paystack** for payment processing:
 
-- **M-Pesa STK Push** - Mobile money payments via Paystack mobile money channel
-- **Card Payments** - Credit/debit card processing
+- **Card Payments** - Secure credit/debit card checkout
+- **Hosted Checkout** - Paystack authorization page for subscribers
 - **Webhook Integration** - Real-time payment notifications
 - **Subscription Management** - Free and Premium plans
 

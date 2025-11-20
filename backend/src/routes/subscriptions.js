@@ -87,8 +87,7 @@ router.get('/my-subscription', protect, getSubscriptionInfo, async (req, res) =>
 // @access  Private
 router.post('/initiate-payment', protect, [
   body('plan').isIn(['free', 'premium']).withMessage('Invalid plan selected'),
-  body('paymentMethod').isIn(['mpesa', 'card']).withMessage('Invalid payment method'),
-  body('phoneNumber').optional().isMobilePhone().withMessage('Invalid phone number')
+  body('paymentMethod').isIn(['card']).withMessage('Invalid payment method')
 ], async (req, res) => {
   try {
     const errors = validationResult(req)
@@ -99,7 +98,7 @@ router.post('/initiate-payment', protect, [
       })
     }
 
-    const { plan, paymentMethod, phoneNumber } = req.body
+    const { plan, paymentMethod } = req.body
     const user = await User.findById(req.user._id)
     
     if (!user) {
@@ -127,33 +126,24 @@ router.post('/initiate-payment', protect, [
     // Prepare payment data
     const amount = planDetails.price
     const currency = planDetails.currency || 'KES'
-    const callbackUrl = `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/subscriptions/webhook`
-
-    // Get user phone number (required for M-Pesa)
-    const userPhone = phoneNumber || user.profile?.phone
-    if (paymentMethod === 'mpesa' && !userPhone) {
-      return res.status(400).json({ 
-        message: 'Phone number is required for M-Pesa payments' 
-      })
-    }
+    const callbackUrl = process.env.PAYSTACK_REDIRECT_URL || `${process.env.FRONTEND_URL || 'http://localhost:3000'}/subscription`
 
     // Create payment metadata
     const metadata = {
       userId: user._id.toString(),
       userEmail: user.email,
       plan: plan,
-      subscriptionType: 'premium'
+      subscriptionType: 'premium',
+      gateway: 'paystack'
     }
 
-    const paymentResult = await paystackService.initiatePayment({
-      amount: amount,
-      currency: currency,
+    const paymentResult = await paystackService.createPaymentSession({
+      amount,
+      currency,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
-      paymentMethod,
-      phoneNumber: userPhone,
-      callbackUrl: callbackUrl,
+      callbackUrl,
       metadata
     })
 
@@ -202,11 +192,9 @@ router.post('/initiate-payment', protect, [
         paymentMethod: paymentMethod,
         ...(paymentResult.paymentLink ? { paymentLink: paymentResult.paymentLink } : {})
       },
-      instructions: paymentMethod === 'mpesa' 
-        ? 'Please check your phone for an M-Pesa prompt to complete the payment.'
-        : paymentResult.paymentLink 
-          ? 'Please complete the payment using the provided Paystack checkout link.'
-          : 'Complete the payment in the Paystack window.'
+      instructions: paymentResult.paymentLink 
+        ? 'Please complete the payment using the secure Paystack checkout page.'
+        : 'Complete the payment in the Paystack window.'
     })
 
   } catch (error) {
@@ -221,24 +209,19 @@ router.post('/initiate-payment', protect, [
 // @route   POST /api/subscriptions/webhook
 // @desc    Webhook handler for Paystack payment callbacks
 // @access  Public (Paystack calls this)
-router.post('/webhook', async (req, res) => {
+router.post('/webhook', express.json(), async (req, res) => {
   try {
     const signature = req.headers['x-paystack-signature']
-    const rawBody = req.rawBody || Buffer.from(JSON.stringify(req.body || {}))
+    const webhookData = req.body || {}
 
-    if (!paystackService.verifySignature(rawBody, signature)) {
-      console.error('Invalid Paystack webhook signature')
+    const processedWebhook = paystackService.processWebhook(webhookData, signature)
+
+    if (!processedWebhook.valid) {
+      console.error('Invalid webhook:', processedWebhook.error)
       return res.status(400).json({ error: 'Invalid webhook signature' })
     }
 
-    const processedWebhook = paystackService.parseWebhookEvent(rawBody)
-
-    if (!processedWebhook.valid) {
-      console.error('Failed to parse Paystack webhook:', processedWebhook.error)
-      return res.status(400).json({ error: 'Invalid webhook payload' })
-    }
-
-    const metadata = processedWebhook.metadata || {}
+    const metadata = processedWebhook.metadata || webhookData.data?.metadata || {}
     const userId = metadata.userId || metadata.user_id
     const plan = metadata.plan || 'premium'
 
@@ -255,7 +238,7 @@ router.post('/webhook', async (req, res) => {
     }
 
     // Find subscription by payment ID - check both metadata map and stripeSubscriptionId field
-    const paymentId = processedWebhook.paymentId
+    const paymentId = processedWebhook.paymentId || webhookData.data?.reference
     const subscription = await Subscription.findOne({ 
       $or: [
         { userId: user._id, stripeSubscriptionId: paymentId },
@@ -297,9 +280,9 @@ router.post('/webhook', async (req, res) => {
           stripeSubscriptionId: paymentId,
           metadata: new Map(Object.entries({
             paymentId: paymentId,
-            apiRef: processedWebhook.data?.access_code || '',
-            amount: processedWebhook.amount?.toString() || '',
-            currency: processedWebhook.currency || 'KES',
+            apiRef: processedWebhook.apiRef || webhookData.api_ref || '',
+            amount: processedWebhook.amount?.toString() || webhookData.amount?.toString() || '',
+            currency: processedWebhook.currency || webhookData.currency || 'KES',
             paidAt: new Date().toISOString()
           }))
         })

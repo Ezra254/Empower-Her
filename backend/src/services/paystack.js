@@ -1,134 +1,156 @@
 const axios = require('axios')
 const crypto = require('crypto')
 
-const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY
 const PAYSTACK_PUBLIC_KEY = process.env.PAYSTACK_PUBLIC_KEY
+const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY
+const PAYSTACK_WEBHOOK_SECRET = process.env.PAYSTACK_WEBHOOK_SECRET || PAYSTACK_SECRET_KEY
 const PAYSTACK_API_URL = process.env.PAYSTACK_API_URL || 'https://api.paystack.co'
 
-const paystackClient = axios.create({
+const client = axios.create({
   baseURL: PAYSTACK_API_URL,
-  timeout: 15000,
+  timeout: 20000,
   headers: {
     Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
     'Content-Type': 'application/json'
   }
 })
 
-const toSubUnit = (amount = 0) => {
-  const numericAmount = Number(amount) || 0
-  return Math.round(numericAmount * 100)
-}
-
-async function initiatePayment({
-  amount,
-  currency = 'KES',
-  email,
-  firstName,
-  lastName,
-  paymentMethod = 'card',
-  phoneNumber,
-  callbackUrl,
-  metadata = {}
-}) {
+const ensureConfigured = () => {
   if (!PAYSTACK_PUBLIC_KEY || !PAYSTACK_SECRET_KEY) {
     return {
       success: false,
       error: 'Paystack credentials are not configured. Please contact support.'
     }
   }
+  return null
+}
+
+const toMinorUnits = amount => {
+  const numericAmount = Number(amount)
+  if (Number.isNaN(numericAmount)) {
+    throw new Error('Invalid amount provided for Paystack transaction')
+  }
+  return Math.round(numericAmount * 100)
+}
+
+async function createPaymentSession({
+  amount,
+  currency = 'KES',
+  email,
+  firstName,
+  lastName,
+  callbackUrl,
+  metadata = {}
+}) {
+  const configError = ensureConfigured()
+  if (configError) return configError
 
   try {
     const payload = {
-      amount: toSubUnit(amount),
       email,
+      amount: toMinorUnits(amount),
       currency,
       callback_url: callbackUrl,
-      metadata,
-      channels: paymentMethod === 'mpesa' ? ['mobile_money'] : ['card']
-    }
-
-    if (paymentMethod === 'mpesa') {
-      payload.mobile_money = {
-        phone: phoneNumber,
-        provider: 'mpesa'
+      metadata: {
+        ...metadata,
+        customer: {
+          firstName,
+          lastName
+        }
       }
     }
 
-    const response = await paystackClient.post('/transaction/initialize', payload)
-    const data = response.data?.data
-
-    if (!data) {
-      return {
-        success: false,
-        error: 'Missing response data from Paystack'
-      }
-    }
+    const response = await client.post('/transaction/initialize', payload)
+    const data = response.data?.data || {}
 
     return {
       success: true,
       paymentId: data.reference,
-      apiRef: data.access_code,
-      status: data.status || 'pending',
-      paymentLink: data.authorization_url || null
+      apiRef: data.reference,
+      status: 'pending',
+      paymentLink: data.authorization_url
     }
   } catch (error) {
-    const message = error.response?.data?.message || error.message
     return {
       success: false,
-      error: message,
+      error: error.response?.data?.message || error.message,
       details: error.response?.data || null
     }
   }
 }
 
-function verifySignature(rawBody, signature) {
-  if (!signature || !PAYSTACK_SECRET_KEY) {
-    return false
-  }
+async function verifyTransaction(reference) {
+  const configError = ensureConfigured()
+  if (configError) return configError
 
-  const expectedSignature = crypto
-    .createHmac('sha512', PAYSTACK_SECRET_KEY)
-    .update(rawBody)
-    .digest('hex')
-
-  return expectedSignature === signature
-}
-
-function parseWebhookEvent(rawBody) {
   try {
-    const event = typeof rawBody === 'string'
-      ? JSON.parse(rawBody)
-      : JSON.parse(rawBody.toString('utf8'))
-
-    const data = event.data || {}
-    const metadata = data.metadata || {}
+    const response = await client.get(`/transaction/verify/${reference}`)
+    const data = response.data?.data || {}
 
     return {
-      valid: true,
-      event,
-      data,
-      metadata,
-      paymentId: data.reference,
-      status: data.status,
-      isSuccess: event.event === 'charge.success' && data.status === 'success',
-      currency: data.currency,
-      amount: typeof data.amount === 'number' ? data.amount / 100 : undefined,
-      customerEmail: data.customer?.email
+      success: data.status === 'success',
+      data
     }
   } catch (error) {
     return {
-      valid: false,
-      error: error.message
+      success: false,
+      error: error.response?.data?.message || error.message,
+      details: error.response?.data || null
     }
+  }
+}
+
+function processWebhook(payload, signature) {
+  if (!PAYSTACK_WEBHOOK_SECRET) {
+    return {
+      valid: false,
+      error: 'Webhook secret not configured'
+    }
+  }
+
+  const serializedPayload = JSON.stringify(payload)
+  const expectedSignature = crypto
+    .createHmac('sha512', PAYSTACK_WEBHOOK_SECRET)
+    .update(serializedPayload)
+    .digest('hex')
+
+  if (expectedSignature !== signature) {
+    return {
+      valid: false,
+      error: 'Invalid webhook signature'
+    }
+  }
+
+  const data = payload?.data || {}
+  const metadata = data.metadata || {}
+  const amount = typeof data.amount === 'number' ? data.amount / 100 : null
+  const currency = data.currency || 'KES'
+  const status = data.status || payload?.event || 'pending'
+  const reference = data.reference || metadata.reference
+
+  const isSuccess =
+    payload?.event === 'charge.success' &&
+    (data.status || '').toLowerCase() === 'success'
+
+  return {
+    valid: true,
+    paymentId: reference,
+    apiRef: reference,
+    metadata,
+    amount,
+    currency,
+    status,
+    isSuccess,
+    data
   }
 }
 
 module.exports = {
   publicKey: PAYSTACK_PUBLIC_KEY,
   secretKey: PAYSTACK_SECRET_KEY,
-  initiatePayment,
-  verifySignature,
-  parseWebhookEvent
+  createPaymentSession,
+  verifyTransaction,
+  processWebhook
 }
 
 

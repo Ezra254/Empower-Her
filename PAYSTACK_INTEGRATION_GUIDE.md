@@ -1,76 +1,81 @@
 # Paystack Integration Guide
 
-This guide explains how EmpowerHer uses Paystack for subscription billing (M-Pesa and card payments) and how to configure each environment.
+This guide explains how EmpowerHer integrates with Paystack for subscription billing. Follow the steps below to configure your Paystack account, environment variables, and webhook handling.
+
+---
 
 ## 1. Create and Configure Your Paystack Account
 
-1. Sign up at [https://dashboard.paystack.com/](https://dashboard.paystack.com/) and select **Kenya** as your business location.
-2. Complete business verification so you can access live API keys.
-3. In the Paystack dashboard, go to **Settings → API Keys & Webhooks** and note the following:
-   - `PAYSTACK_PUBLIC_KEY`
-   - `PAYSTACK_SECRET_KEY`
-   - (Optional) a dedicated webhook signing secret if Paystack enables it for your account. When absent, Paystack uses the secret key for signatures.
+1. Sign up at [https://paystack.com](https://paystack.com) and complete your business verification.
+2. Navigate to **Settings → API Keys & Webhooks**.
+3. Copy the following credentials:
+   - **Public Key** (`pk_test_xxx` or `pk_live_xxx`)
+   - **Secret Key** (`sk_test_xxx` or `sk_live_xxx`)
+   - **Webhook Signing Secret** (create one under the Webhooks section)
+4. Enable the currencies you plan to accept (e.g., `KES`, `USD`).
 
-Use the test keys (`pk_test_*`, `sk_test_*`) for local/dev environments and the live keys (`pk_live_*`, `sk_live_*`) for production.
+---
 
 ## 2. Backend Environment Variables
 
-Set the following variables in `backend/.env` (or deployment provider secrets):
+Create or update `backend/.env` with the Paystack credentials:
 
-```
-PAYSTACK_PUBLIC_KEY=pk_test_xxxxx
-PAYSTACK_SECRET_KEY=sk_test_xxxxx
+```env
+PAYSTACK_PUBLIC_KEY=pk_test_xxx
+PAYSTACK_SECRET_KEY=sk_test_xxx
+PAYSTACK_WEBHOOK_SECRET=your_webhook_secret
 PAYSTACK_API_URL=https://api.paystack.co
-BACKEND_URL=http://localhost:5000
-FRONTEND_URL=http://localhost:3000
+PAYSTACK_REDIRECT_URL=http://localhost:3000/subscription
 ```
 
-`PAYSTACK_API_URL` is optional and defaults to Paystack’s production API. Override it only if Paystack provides a regional sandbox endpoint.
+- `PAYSTACK_REDIRECT_URL` is the page Paystack redirects users to after payment. In production, set this to your live subscription page.
+- Restart the backend after changing environment variables.
 
-## 3. Frontend Configuration
+---
 
-The frontend does not need Paystack keys. It simply calls the backend to initiate payments and receives the Paystack checkout link (for card payments) or instructions (for M-Pesa STK push). Ensure `NEXT_PUBLIC_API_URL` points to the backend instance with valid Paystack credentials.
+## 3. Webhook Configuration
 
-## 4. Initiating Payments
+1. In the Paystack dashboard, go to **Settings → API Keys & Webhooks**.
+2. Set the **Webhook URL** to:
+   ```
+   https://<your-backend-domain>/api/subscriptions/webhook
+   ```
+3. Paste the same **Webhook Signing Secret** you configured in the `.env` file.
+4. Save the settings and click **Send Test** to verify delivery.
 
-1. Users open `/subscription` and choose the Premium plan.
-2. The frontend calls `POST /api/subscriptions/initiate-payment` with:
-   - `plan`: `premium`
-   - `paymentMethod`: `card` or `mpesa`
-   - `phoneNumber`: required when `paymentMethod` is `mpesa`
-3. The backend creates a Paystack transaction via `/transaction/initialize`.
-4. Response payload:
-   - `payment.paymentLink`: Paystack authorization URL (card payments) – open this in a new tab.
-   - `instructions`: human-readable instructions (e.g., “check your phone” for M-Pesa).
+EmpowerHer validates every webhook using the `x-paystack-signature` header (HMAC-SHA512). Webhooks that fail signature verification are rejected.
 
-## 5. Webhook Setup
+---
 
-1. In the Paystack dashboard, add a webhook URL: `https://<your-backend-domain>/api/subscriptions/webhook`.
-2. Ensure the webhook is enabled for “Charge Success/Failure” events.
-3. EmpowerHer verifies every webhook using the `x-paystack-signature` header and your secret key.
+## 4. Payment Flow Overview
 
-### Testing Webhooks
+1. The frontend calls `POST /api/subscriptions/initiate-payment` with `plan` and `paymentMethod: "card"`.
+2. The backend uses `services/paystack.js` to create a Paystack transaction via `/transaction/initialize`.
+3. The API responds with a `paymentLink` (Paystack hosted checkout) that the frontend opens in a new tab.
+4. After the customer completes payment, Paystack:
+   - Redirects the customer to `PAYSTACK_REDIRECT_URL`.
+   - Sends a webhook to `/api/subscriptions/webhook`.
+5. The webhook verifies the signature and, on success, activates the user’s premium subscription.
 
-- Use `PAYSTACK_PUBLIC_KEY`/`PAYSTACK_SECRET_KEY` test keys locally.
-- Trigger a manual event via Paystack’s dashboard or complete a test transaction.
-- Inspect backend logs to confirm `Subscription activated` messages.
+---
 
-## 6. Going Live
+## 5. Testing Payments
 
-1. Swap test keys with live keys in your hosting provider’s secrets/variables.
-2. Update `FRONTEND_URL` and `BACKEND_URL` so Paystack redirects to production domains.
-3. Reconfigure the webhook URL to point to the production backend.
-4. Run a real M-Pesa and card transaction with small amounts to validate end-to-end.
+- Use [Paystack test cards](https://paystack.com/docs/payments/test-payments) while in test mode.
+- Ensure you use the **test** public/secret keys when running locally.
+- Monitor webhook deliveries from the Paystack dashboard under **Developers → Logs**.
 
-## 7. Troubleshooting
+---
 
-| Issue | Possible Cause | Fix |
-|-------|----------------|-----|
-| `Payment gateway not configured` error | Missing Paystack keys in backend env | Set `PAYSTACK_PUBLIC_KEY` and `PAYSTACK_SECRET_KEY`, restart server |
-| Webhook signature invalid | Wrong secret key or modified payload | Confirm webhook is hitting the same backend that owns the keys; ensure HTTPS |
-| M-Pesa prompt not received | Wrong phone format or unsupported SIM | Use international format (`2547xxxxxxxx`), confirm SIM is M-Pesa-enabled |
-| Card payments stuck on pending | User closed Paystack page early | Instruct users to wait for success, or retry from `/subscription` |
+## 6. Troubleshooting
 
-For further help, consult the [Paystack Developer Docs](https://paystack.com/docs/).
+| Issue | Possible Cause | Resolution |
+|-------|----------------|------------|
+| `Payment gateway not configured` | Missing Paystack keys in backend `.env` | Set `PAYSTACK_PUBLIC_KEY` and `PAYSTACK_SECRET_KEY`, then restart the backend |
+| `Invalid webhook signature` | Webhook secret mismatch | Confirm `PAYSTACK_WEBHOOK_SECRET` matches the value in the Paystack dashboard |
+| Payment never activates subscription | Webhook not reaching backend | Confirm the backend URL is publicly reachable and `/api/subscriptions/webhook` is whitelisted |
+| Amount shows as 0.00 in Paystack | Plan price missing or zero | Verify plan configuration via `Plan.ensureDefaultPlans()` or `init-plans` script |
+
+Refer to the [Paystack Developer Docs](https://paystack.com/docs/) for detailed API behavior and additional features such as split payments, bank transfers, or payment pages.
 
 
