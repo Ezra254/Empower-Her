@@ -11,6 +11,10 @@ export interface User {
     plan: string
     status: string
   }
+  profile?: {
+    phone?: string
+    [key: string]: any
+  }
 }
 
 export const authService = {
