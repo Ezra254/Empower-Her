@@ -386,9 +386,9 @@ npm start
 
 ### Access the Application
 
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:5000
-- **API Health Check**: http://localhost:5000/api/health
+- **Frontend**: https://empowerher-frontend.vercel.app/
+- **Backend API**: https://empowerher-backend-gs03.onrender.com
+- **API Health Check**: https://empowerher-backend-gs03.onrender.com/api/health
 
 ---
 
@@ -399,7 +399,6 @@ npm start
 - **[Setup Guide](SETUP.md)** - Detailed setup instructions
 - **[Deployment Guide](DEPLOYMENT.md)** - Production deployment steps
 - **[Paystack Integration Guide](PAYSTACK_INTEGRATION_GUIDE.md)** - Payment gateway setup
-- **[Payment Troubleshooting](PAYMENT_TROUBLESHOOTING.md)** - Payment issues resolution
 - **[Webhook Setup](WEBHOOK_CHALLENGE_SETUP.md)** - Webhook configuration
 
 ### API Documentation
@@ -531,7 +530,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support & Contact
 
-- **Email**: support@empowerher.org
+- **Email**: ezragift51@gmail.com
 - **Documentation**: See `/docs` directory
 - **Issues**: GitHub Issues
 
